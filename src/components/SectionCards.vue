@@ -11,11 +11,19 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { onMounted, ref } from "vue";
+import { fetchApi } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 
+const { agencyId } = useAuth();
 const memorialCount = ref(0);
 
 onMounted(async () => {
-  // Logic to fetch memorial count can be added here
+  let endpoint = "/api/tombstones";
+  if (agencyId.value) {
+    endpoint += `?filters[agency][id][$eq]=${agencyId.value}`;
+  }
+  const response = await fetchApi(endpoint);
+  memorialCount.value = response.data?.length ?? 0;
 });
 </script>
 
@@ -26,23 +34,16 @@ onMounted(async () => {
       <CardHeader>
         <CardDescription>Memoriali attivi</CardDescription>
         <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-          <!-- Da aggiungere -->
+          {{ memorialCount }}
         </CardTitle>
-        <CardAction>
-          <Badge variant="outline">
-            <IconTrendingUp />
-            +12.5%
-          </Badge>
-        </CardAction>
       </CardHeader>
       <CardFooter class="flex-col items-start gap-1.5 text-sm">
-        <div class="line-clamp-1 flex gap-2 font-medium">
-          Trending up this month
-          <IconTrendingUp class="size-4" />
-        </div>
-        <div class="text-muted-foreground">
-          Visitors for the last 6 months
-        </div>
+        <router-link to="/memorials">
+          <Button variant="outline">
+            Vedi memoriali
+            <IconArrowRight />
+          </Button>
+        </router-link>
       </CardFooter>
     </Card>
     <Card class="@container/card">

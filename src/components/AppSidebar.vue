@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useAuth } from '@/lib/auth'
 import {
   IconCamera,
   IconChartBar,
@@ -30,12 +32,14 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
 
+const { user: authUser } = useAuth()
+
 const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
+  user: computed(() => ({
+    name: authUser.value?.username ?? 'Utente',
+    email: authUser.value?.email ?? '',
+    avatar: '/avatars/shadcn.jpg',
+  })),
   navMain: [
     {
       title: "Dashboard",
@@ -148,6 +152,7 @@ const data = {
 }
 </script>
 
+
 <template>
   <Sidebar collapsible="icon">
     <SidebarHeader>
@@ -166,7 +171,7 @@ const data = {
       <NavMain :items="data.navMain" />
     </SidebarContent>
     <SidebarFooter>
-      <NavUser :user="data.user" />
+      <NavUser :user="data.user.value" />
     </SidebarFooter>
   </Sidebar>
 </template>

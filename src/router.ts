@@ -1,12 +1,20 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
+import { useAuth } from '@/lib/auth'
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
+      path: '/login',
+      name: 'Login',
+      component: () => import('@/pages/LoginView.vue'),
+      meta: { requiresAuth: false },
+    },
+    {
       path: '/',
       component: DashboardLayout,
+      meta: { requiresAuth: true },
       children: [
         {
           path: '',
@@ -45,6 +53,21 @@ const router = createRouter({
       ],
     },
   ],
+})
+
+router.beforeEach((to, _from, next) => {
+  const { isAuthenticated } = useAuth()
+
+  // Check if the route or any parent route requires auth
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth !== false)
+
+  if (requiresAuth && !isAuthenticated.value) {
+    next({ name: 'Login' })
+  } else if (to.name === 'Login' && isAuthenticated.value) {
+    next({ name: 'Dashboard' })
+  } else {
+    next()
+  }
 })
 
 export default router
