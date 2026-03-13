@@ -49,21 +49,41 @@ export function useAuth() {
   async function fetchCurrentUser() {
     if (!token.value) return null
 
-    const response = await fetch(`${API_URL}/api/users/me?populate=agencies`, {
-      headers: {
-        'Authorization': `Bearer ${token.value}`,
-      },
-    })
+    try {
+      // Step 1: Get basic user info (including ID)
+      const meResponse = await fetch(`${API_URL}/api/users/me`, {
+        headers: {
+          'Authorization': `Bearer ${token.value}`,
+        },
+      })
 
-    if (!response.ok) {
-      logout()
+      if (!meResponse.ok) {
+        logout()
+        return null
+      }
+
+      const meData = await meResponse.json()
+      
+      // Step 2: Fetch full user with agencies because /users/me doesn't always support populate
+      const fullResponse = await fetch(`${API_URL}/api/users/${meData.id}?populate=agencies`, {
+        headers: {
+          'Authorization': `Bearer ${token.value}`,
+        },
+      })
+
+      if (!fullResponse.ok) {
+        // Fallback to meData if full fetch fails
+        user.value = meData
+      } else {
+        user.value = await fullResponse.json()
+      }
+
+      localStorage.setItem('auth_user', JSON.stringify(user.value))
+      return user.value
+    } catch (error) {
+      console.error('Errore fetchCurrentUser:', error)
       return null
     }
-
-    const data = await response.json()
-    user.value = data
-    localStorage.setItem('auth_user', JSON.stringify(data))
-    return data
   }
 
   function logout() {

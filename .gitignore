@@ -14,6 +14,7 @@ jspm_packages/
 dist/
 dist-ssr/
 *.local
+*.tsbuildinfo
 
 # Environment variables
 .env

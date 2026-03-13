@@ -1,119 +1,113 @@
 <script setup lang="ts">
-import { IconTrendingDown, IconTrendingUp } from "@tabler/icons-vue"
+import { 
+  IconArrowUpRight, 
+  IconMessage2, 
+  IconUsers, 
+  IconUser, 
+  IconSquareRoundedCheck,
+  IconLayoutDashboard
+} from "@tabler/icons-vue"
 
-import { Badge } from '@/components/ui/badge'
-import {
-  Card,
-  CardAction,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { onMounted, ref } from "vue";
-import { fetchApi } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
+import { Card, CardContent } from '@/components/ui/card'
+import { ref, watch, onMounted } from "vue"
+import { fetchApi } from "@/lib/api"
+import { useAuth } from "@/lib/auth"
 
-const { agencyId } = useAuth();
-const memorialCount = ref(0);
+const { agencyId } = useAuth()
+const memorialCount = ref(0)
+const pendingContributionsCount = ref(0)
+const staffCount = ref(0)
+const clientsCount = ref(0)
 
-onMounted(async () => {
-  let endpoint = "/api/tombstones";
-  if (agencyId.value) {
-    endpoint += `?filters[agency][id][$eq]=${agencyId.value}`;
+async function fetchMetrics() {
+  if (!agencyId.value) return
+
+  try {
+    const [memorials, contributions, staff, permissions] = await Promise.all([
+      fetchApi(`/api/tombstones?filters[agency][id][$eq]=${agencyId.value}&filters[lifecycle_status][$eq]=published&pagination[withCount]=true&pagination[limit]=1`),
+      fetchApi(`/api/contributions?filters[tombstone][agency][id][$eq]=${agencyId.value}&filters[is_approved][$eq]=false&pagination[withCount]=true&pagination[limit]=1`),
+      fetchApi(`/api/users?filters[agencies][id][$in]=${agencyId.value}&filters[role_type][$eq]=agency_staff`),
+      fetchApi(`/api/tombstone-permissions?filters[tombstone][agency][id][$eq]=${agencyId.value}&filters[access_level][$eq]=owner&pagination[withCount]=true&pagination[limit]=1`)
+    ])
+
+    memorialCount.value = memorials.meta?.pagination?.total ?? 0
+    pendingContributionsCount.value = contributions.meta?.pagination?.total ?? 0
+    staffCount.value = Array.isArray(staff) ? staff.length : (staff.meta?.pagination?.total ?? 0)
+    clientsCount.value = permissions.meta?.pagination?.total ?? 0
+  } catch (error) {
+    console.error("Error fetching dashboard metrics:", error)
   }
-  const response = await fetchApi(endpoint);
-  memorialCount.value = response.data?.length ?? 0;
-});
+}
+
+watch(agencyId, fetchMetrics, { immediate: true })
+onMounted(fetchMetrics)
+
+const kpis = [
+  {
+    title: 'Memoriali attivi',
+    value: memorialCount,
+    icon: IconLayoutDashboard,
+    color: 'text-blue-500',
+    bg: 'bg-blue-500/10',
+    link: '/memorials'
+  },
+  {
+    title: 'Contributi pendenti',
+    value: pendingContributionsCount,
+    icon: IconMessage2,
+    color: 'text-amber-500',
+    bg: 'bg-amber-500/10',
+    link: '/contributions'
+  },
+  {
+    title: 'Staffer',
+    value: staffCount,
+    icon: IconUser,
+    color: 'text-emerald-500',
+    bg: 'bg-emerald-500/10',
+    link: '/staff'
+  },
+  {
+    title: 'Clienti',
+    value: clientsCount,
+    icon: IconUsers,
+    color: 'text-purple-500',
+    bg: 'bg-purple-500/10',
+    link: '/clients'
+  }
+]
 </script>
 
 <template>
-  <div
-    class="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-linear-to-t *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
-    <Card class="@container/card">
-      <CardHeader>
-        <CardDescription>Memoriali attivi</CardDescription>
-        <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-          {{ memorialCount }}
-        </CardTitle>
-      </CardHeader>
-      <CardFooter class="flex-col items-start gap-1.5 text-sm">
-        <router-link to="/memorials">
-          <Button variant="outline">
-            Vedi memoriali
-            <IconArrowRight />
-          </Button>
-        </router-link>
-      </CardFooter>
-    </Card>
-    <Card class="@container/card">
-      <CardHeader>
-        <CardDescription>New Customers</CardDescription>
-        <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-          1,234
-        </CardTitle>
-        <CardAction>
-          <Badge variant="outline">
-            <IconTrendingDown />
-            -20%
-          </Badge>
-        </CardAction>
-      </CardHeader>
-      <CardFooter class="flex-col items-start gap-1.5 text-sm">
-        <div class="line-clamp-1 flex gap-2 font-medium">
-          Down 20% this period
-          <IconTrendingDown class="size-4" />
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+    <Card 
+      v-for="kpi in kpis" 
+      :key="kpi.title"
+      class="group relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-border/40 bg-card/60 backdrop-blur-sm"
+    >
+      <router-link :to="kpi.link" class="absolute inset-0 z-10" />
+      <CardContent class="p-4 flex items-center gap-4">
+        <!-- Icon Side -->
+        <div :class="['shrink-0 p-3 rounded-xl transition-all duration-300 group-hover:scale-110 shadow-sm', kpi.bg, kpi.color]">
+          <component :is="kpi.icon" class="size-6" />
         </div>
-        <div class="text-muted-foreground">
-          Acquisition needs attention
+        
+        <!-- Text Side -->
+        <div class="flex-1 min-w-0">
+          <p class="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 mb-0.5">
+            {{ kpi.title }}
+          </p>
+          <div class="flex items-center justify-between">
+            <h3 class="text-xl font-extrabold tracking-tight text-foreground/90 tabular-nums">
+              {{ kpi.value.value }}
+            </h3>
+            <IconArrowUpRight class="size-3.5 text-muted-foreground/30 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
         </div>
-      </CardFooter>
-    </Card>
-    <Card class="@container/card">
-      <CardHeader>
-        <CardDescription>Active Accounts</CardDescription>
-        <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-          45,678
-        </CardTitle>
-        <CardAction>
-          <Badge variant="outline">
-            <IconTrendingUp />
-            +12.5%
-          </Badge>
-        </CardAction>
-      </CardHeader>
-      <CardFooter class="flex-col items-start gap-1.5 text-sm">
-        <div class="line-clamp-1 flex gap-2 font-medium">
-          Strong user retention
-          <IconTrendingUp class="size-4" />
-        </div>
-        <div class="text-muted-foreground">
-          Engagement exceed targets
-        </div>
-      </CardFooter>
-    </Card>
-    <Card class="@container/card">
-      <CardHeader>
-        <CardDescription>Growth Rate</CardDescription>
-        <CardTitle class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-          4.5%
-        </CardTitle>
-        <CardAction>
-          <Badge variant="outline">
-            <IconTrendingUp />
-            +4.5%
-          </Badge>
-        </CardAction>
-      </CardHeader>
-      <CardFooter class="flex-col items-start gap-1.5 text-sm">
-        <div class="line-clamp-1 flex gap-2 font-medium">
-          Steady performance increase
-          <IconTrendingUp class="size-4" />
-        </div>
-        <div class="text-muted-foreground">
-          Meets growth projections
-        </div>
-      </CardFooter>
+
+        <!-- Subtle Glow -->
+        <div class="absolute -right-4 -bottom-4 size-16 rounded-full blur-2xl opacity-0 group-hover:opacity-20 transition-opacity" :class="kpi.bg" />
+      </CardContent>
     </Card>
   </div>
 </template>
