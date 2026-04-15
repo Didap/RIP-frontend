@@ -1,19 +1,29 @@
 <script setup lang="ts">
 import { h, ref, watch, onMounted } from 'vue'
 import type { ColumnDef } from '@tanstack/vue-table'
-import { IconEye, IconEdit, IconToggleLeft, IconToggleRight, IconTrash, IconUser } from '@tabler/icons-vue'
+import { 
+  IconEye, 
+  IconEdit, 
+  IconToggleLeft, 
+  IconToggleRight, 
+  IconTrash, 
+  IconUser, 
+  IconQrcode 
+} from '@tabler/icons-vue'
 
 import BaseDataTable from '@/components/BaseDataTable.vue'
 import MemorialDialog from '@/components/MemorialDialog.vue'
+import QRCodeDialog from '@/components/QRCodeDialog.vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { fetchApi } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 
 interface Memorial {
-  id: number
+  id: number | string
   full_name: string
   slug: string
+  link?: string
   lifecycle_status: 'draft' | 'published'
   createdAt: string
   contributions?: number
@@ -31,6 +41,7 @@ const loading = ref(true)
 
 // Modal states
 const isEditDialogOpen = ref(false)
+const isQRDialogOpen = ref(false)
 const selectedMemorial = ref<Memorial | null>(null)
 
 async function loadMemorials() {
@@ -41,15 +52,24 @@ async function loadMemorials() {
     // Specifichiamo i campi dell'utente per evitare errori di permessi su campi come 'role'
     const endpoint = `/api/tombstones?filters[agency][id][$eq]=${agencyId.value}&populate[contributions][count]=true&populate[permissions][populate][user][fields][0]=username&populate[permissions][populate][user][fields][1]=first_name&populate[permissions][populate][user][fields][2]=last_name&sort=createdAt:desc`
     const response = await fetchApi(endpoint)
-    data.value = (response.data ?? response).map((item: any) => {
+    const rawData = response.data ?? response
+    
+    // Safety check: ensure we have an array before mapping
+    if (!Array.isArray(rawData)) {
+      console.warn('API non ha restituito un array di memoriali:', response)
+      data.value = []
+      return
+    }
+
+    data.value = rawData.map((item: any) => {
       const attrs = item.attributes ?? item
       // Cerchiamo il permesso di tipo 'owner'
       const ownerPermission = attrs.permissions?.data?.find((p: any) => p.attributes?.access_level === 'owner')
       const ownerData = ownerPermission?.attributes?.user?.data
       
       return {
-        id: item.id,
         ...attrs,
+        id: item.documentId || item.id, // Sovrascriviamo l'id interno con il documentId per Strapi 5
         contributions: attrs.contributions?.data?.meta?.pagination?.total ?? attrs.contributions?.count ?? 0,
         owner: ownerData ? { id: ownerData.id, ...ownerData.attributes } : null
       }
@@ -90,6 +110,11 @@ async function deleteMemorial(id: number) {
 function openEdit(memorial: Memorial) {
   selectedMemorial.value = memorial
   isEditDialogOpen.value = true
+}
+
+function openQR(memorial: Memorial) {
+  selectedMemorial.value = memorial
+  isQRDialogOpen.value = true
 }
 
 const columns: ColumnDef<Memorial, any>[] = [
@@ -147,12 +172,19 @@ const columns: ColumnDef<Memorial, any>[] = [
       return h('div', { class: 'flex items-center gap-1 justify-end' }, [
         h(Button, {
           variant: 'ghost', size: 'icon', class: 'size-8', title: 'Vedi pagina',
-          onClick: () => window.open(`/memorial/${memorial.slug}`, '_blank')
+          onClick: () => {
+            const baseUrl = import.meta.env.VITE_WEBSITE_URL || 'https://memora.life'
+            window.open(`${baseUrl}/memorial/${memorial.slug}`, '_blank')
+          }
         }, () => h(IconEye, { class: 'size-4' })),
         h(Button, {
           variant: 'ghost', size: 'icon', class: 'size-8', title: 'Modifica',
           onClick: () => openEdit(memorial)
         }, () => h(IconEdit, { class: 'size-4' })),
+        h(Button, {
+          variant: 'ghost', size: 'icon', class: 'size-8', title: 'Genera QR',
+          onClick: () => openQR(memorial)
+        }, () => h(IconQrcode, { class: 'size-4 text-blue-500' })),
         h(Button, {
           variant: 'ghost', size: 'icon', class: 'size-8', title: isPublished ? 'Metti in bozza' : 'Pubblica',
           onClick: () => toggleStatus(memorial)
@@ -186,6 +218,11 @@ onMounted(loadMemorials)
       v-model:open="isEditDialogOpen" 
       :memorial="selectedMemorial" 
       @updated="loadMemorials" 
+    />
+
+    <QRCodeDialog
+      v-model:open="isQRDialogOpen"
+      :memorial="selectedMemorial"
     />
   </div>
 </template>

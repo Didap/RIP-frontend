@@ -23,7 +23,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { fetchApi } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
-import { IconCirclePlus, IconLoader2, IconUser, IconCalendar, IconInfoCircle } from '@tabler/icons-vue'
+import { IconCirclePlus, IconLoader2, IconUser, IconCalendar, IconInfoCircle, IconEdit } from '@tabler/icons-vue'
 
 const props = defineProps<{
   open: boolean
@@ -42,6 +42,7 @@ const form = ref({
   death_date: '',
   biography: '',
   owner_id: '',
+  link: '',
 })
 
 const users = ref<any[]>([])
@@ -61,6 +62,7 @@ watch(() => props.open, (newVal) => {
         death_date: props.memorial.dates?.death || '',
         biography: props.memorial.biography || '',
         owner_id: props.memorial.owner?.id?.toString() || '',
+        link: props.memorial.link || '',
       }
     } else {
       resetForm()
@@ -106,6 +108,7 @@ async function handleSave() {
       dates: datesJson,
       biography: form.value.biography,
       agency: parseInt(agencyId.value.toString()),
+      link: form.value.link,
     }
 
     if (!isEditing.value) {
@@ -175,6 +178,7 @@ function resetForm() {
     death_date: '',
     biography: '',
     owner_id: '',
+    link: '',
   }
   activeTab.value = 'general'
 }
@@ -188,12 +192,12 @@ onMounted(loadUsers)
       <DialogHeader class="p-6 bg-primary text-primary-foreground">
         <div class="flex items-center gap-3">
           <div class="p-2 bg-white/10 rounded-lg">
-             <IconCirclePlus class="size-6" />
+             <component :is="isEditing ? IconEdit : IconCirclePlus" class="size-6" />
           </div>
           <div>
-            <DialogTitle class="text-xl">Nuovo Memoriale</DialogTitle>
+            <DialogTitle class="text-xl">{{ isEditing ? 'Modifica Memoriale' : 'Nuovo Memoriale' }}</DialogTitle>
             <DialogDescription class="text-primary-foreground/70">
-              Compila tutti i campi per pubblicare una nuova lapide digitale.
+              {{ isEditing ? 'Aggiorna i dati della lapide digitale.' : 'Compila tutti i campi per pubblicare una nuova lapide digitale.' }}
             </DialogDescription>
           </div>
         </div>
@@ -231,6 +235,16 @@ onMounted(loadUsers)
                 placeholder="Esempio: Per sempre nel nostro cuore" 
                 class="h-11"
               />
+            </div>
+            <div class="grid gap-2">
+              <Label for="link" class="font-bold">Link Memoriale (Destinazione QR)</Label>
+              <Input 
+                id="link" 
+                v-model="form.link" 
+                placeholder="Esempio: https://link/mario-rossi" 
+                class="h-11"
+              />
+              <p class="text-[10px] text-muted-foreground">Se lasciato vuoto, il QR punterà all'URL predefinito del sistema.</p>
             </div>
             <div class="grid gap-2">
               <Label for="biography" class="font-bold">Biografia Breve</Label>
@@ -293,7 +307,7 @@ onMounted(loadUsers)
           class="min-w-[140px]"
         >
           <IconLoader2 v-if="submitting" class="mr-2 size-4 animate-spin" />
-          <span v-else>Crea Memoriale</span>
+          <span v-else>{{ isEditing ? 'Salva Modifiche' : 'Crea Memoriale' }}</span>
         </Button>
       </DialogFooter>
     </DialogContent>

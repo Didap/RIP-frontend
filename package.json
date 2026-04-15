@@ -20,6 +20,7 @@
     "clsx": "^2.1.1",
     "dnd-kit-vue": "^0.0.2",
     "lucide-vue-next": "^0.577.0",
+    "qrcode.vue": "^3.8.1",
     "reka-ui": "^2.9.1",
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.2.1",
