@@ -16,14 +16,23 @@ import {
   SelectContent,
   SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { fetchApi } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
-import { IconCirclePlus, IconLoader2, IconUser, IconCalendar, IconInfoCircle, IconEdit } from '@tabler/icons-vue'
+import { 
+  IconCirclePlus, 
+  IconLoader2, 
+  IconUser, 
+  IconCalendar, 
+  IconInfoCircle, 
+  IconEdit,
+  IconArrowRight,
+  IconArrowLeft
+} from '@tabler/icons-vue'
+import WizardStepper from '@/components/WizardStepper.vue'
 
 const props = defineProps<{
   open: boolean
@@ -48,9 +57,44 @@ const form = ref({
 const users = ref<any[]>([])
 const loadingUsers = ref(false)
 const submitting = ref(false)
+
+// Tabs State (Edit Mode)
 const activeTab = ref('general')
 
+// Wizard State (Create Mode)
+const currentStep = ref(1)
+const wizardSteps = ['Identità', 'Storia', 'Impostazioni', 'Assegnazione']
+
 const isEditing = computed(() => !!props.memorial)
+
+// Validation per step
+const canProceed = computed(() => {
+  if (isEditing.value) return true;
+  
+  switch (currentStep.value) {
+    case 1:
+      return form.value.full_name.trim().length > 0;
+    case 2:
+    case 3:
+      return true; // Optional fields
+    case 4:
+      return form.value.owner_id !== '';
+    default:
+      return false;
+  }
+})
+
+function goNext() {
+  if (canProceed.value && currentStep.value < wizardSteps.length) {
+    currentStep.value++
+  }
+}
+
+function goBack() {
+  if (currentStep.value > 1) {
+    currentStep.value--
+  }
+}
 
 watch(() => props.open, (newVal) => {
   if (newVal) {
@@ -124,8 +168,6 @@ async function handleSave() {
 
       // Update owner if changed
       if (form.value.owner_id && form.value.owner_id !== props.memorial.owner?.id?.toString()) {
-         // This logic might need refinement depending on how permissions are structured
-         // For now, let's assume we create/update the owner permission
          await updateOwnerPermission(props.memorial.id, parseInt(form.value.owner_id))
       }
 
@@ -156,8 +198,6 @@ async function handleSave() {
 }
 
 async function updateOwnerPermission(tombstoneId: number, userId: number) {
-  // Simple logic: try to find existing owner permission or just create a new one
-  // Typically you'd delete old ones if switching owners
   await fetchApi('/api/tombstone-permissions', {
     method: 'POST',
     body: JSON.stringify({
@@ -181,6 +221,7 @@ function resetForm() {
     link: '',
   }
   activeTab.value = 'general'
+  currentStep.value = 1
 }
 
 onMounted(loadUsers)
@@ -189,7 +230,7 @@ onMounted(loadUsers)
 <template>
   <Dialog :open="open" @update:open="emit('update:open', $event)">
     <DialogContent class="sm:max-w-[600px] p-0 overflow-hidden border-none shadow-2xl">
-      <DialogHeader class="p-6 bg-primary text-primary-foreground">
+      <DialogHeader class="p-6 bg-primary text-primary-foreground relative z-10">
         <div class="flex items-center gap-3">
           <div class="p-2 bg-white/10 rounded-lg">
              <component :is="isEditing ? IconEdit : IconCirclePlus" class="size-6" />
@@ -203,8 +244,9 @@ onMounted(loadUsers)
         </div>
       </DialogHeader>
 
-      <div class="p-6">
-        <Tabs v-model="activeTab" class="w-full">
+      <div class="p-6 bg-background">
+        <!-- EDIT MODE (Tabs) -->
+        <Tabs v-if="isEditing" v-model="activeTab" class="w-full">
           <TabsList class="grid w-full grid-cols-3 mb-6">
             <TabsTrigger value="general" class="gap-2">
               <IconInfoCircle class="size-4" /> Generale
@@ -219,37 +261,22 @@ onMounted(loadUsers)
 
           <TabsContent value="general" class="space-y-4 py-2">
             <div class="grid gap-2">
-              <Label for="full_name" class="font-bold">Nome Completo</Label>
-              <Input 
-                id="full_name" 
-                v-model="form.full_name" 
-                placeholder="Nome e Cognome del defunto" 
-                class="h-11"
-              />
+              <Label for="edit_full_name" class="font-bold">Nome Completo <span class="text-destructive">*</span></Label>
+              <Input id="edit_full_name" v-model="form.full_name" placeholder="Nome e Cognome del defunto" class="h-11" />
             </div>
             <div class="grid gap-2">
-              <Label for="slogan" class="font-bold">Slogan / Citazione</Label>
-              <Input 
-                id="slogan" 
-                v-model="form.slogan" 
-                placeholder="Esempio: Per sempre nel nostro cuore" 
-                class="h-11"
-              />
+              <Label for="edit_slogan" class="font-bold">Slogan / Citazione</Label>
+              <Input id="edit_slogan" v-model="form.slogan" placeholder="Esempio: Per sempre nel nostro cuore" class="h-11" />
             </div>
             <div class="grid gap-2">
-              <Label for="link" class="font-bold">Link Memoriale (Destinazione QR)</Label>
-              <Input 
-                id="link" 
-                v-model="form.link" 
-                placeholder="Esempio: https://link/mario-rossi" 
-                class="h-11"
-              />
+              <Label for="edit_link" class="font-bold">Link Memoriale (Destinazione QR)</Label>
+              <Input id="edit_link" v-model="form.link" placeholder="Esempio: https://link/mario-rossi" class="h-11" />
               <p class="text-[10px] text-muted-foreground">Se lasciato vuoto, il QR punterà all'URL predefinito del sistema.</p>
             </div>
             <div class="grid gap-2">
-              <Label for="biography" class="font-bold">Biografia Breve</Label>
+              <Label for="edit_biography" class="font-bold">Biografia Breve</Label>
               <textarea 
-                id="biography" 
+                id="edit_biography" 
                 v-model="form.biography"
                 class="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 placeholder="Racchiudi qui i momenti salienti di una vita..."
@@ -260,19 +287,13 @@ onMounted(loadUsers)
           <TabsContent value="details" class="space-y-4 py-2">
             <div class="grid grid-cols-2 gap-4">
               <div class="grid gap-2">
-                <Label for="birth_date" class="font-bold">Data di Nascita</Label>
-                <Input id="birth_date" type="date" v-model="form.birth_date" />
+                <Label for="edit_birth_date" class="font-bold">Data di Nascita</Label>
+                <Input id="edit_birth_date" type="date" v-model="form.birth_date" />
               </div>
               <div class="grid gap-2">
-                <Label for="death_date" class="font-bold">Data di Morte</Label>
-                <Input id="death_date" type="date" v-model="form.death_date" />
+                <Label for="edit_death_date" class="font-bold">Data di Morte</Label>
+                <Input id="edit_death_date" type="date" v-model="form.death_date" />
               </div>
-            </div>
-            <div class="p-4 bg-muted/30 rounded-lg border border-border/50">
-               <p class="text-[11px] text-muted-foreground leading-relaxed">
-                  <span class="font-bold block mb-1">Nota sulle immagini</span>
-                  Le immagini del profilo e della copertina potranno essere caricate nella sezione di modifica avanzata dopo la creazione iniziale.
-               </p>
             </div>
           </TabsContent>
 
@@ -291,25 +312,185 @@ onMounted(loadUsers)
                   </SelectGroup>
                 </SelectContent>
               </Select>
-              <p class="text-[11px] text-muted-foreground mt-2">
-                L'utente selezionato riceverà i permessi 'Owner' e potrà gestire i contenuti del memoriale.
-              </p>
             </div>
           </TabsContent>
         </Tabs>
+
+        <!-- CREATE MODE (Wizard) -->
+        <div v-else class="space-y-8 mt-2">
+          <div class="px-4 pb-6">
+            <WizardStepper :steps="wizardSteps" :currentStep="currentStep" />
+          </div>
+
+          <div class="relative overflow-hidden min-h-[300px]">
+            <Transition name="slide-fade" mode="out-in">
+              <!-- Step 1: Identità -->
+              <div v-if="currentStep === 1" class="space-y-4" key="step1">
+                <div class="grid gap-2">
+                  <Label for="full_name" class="font-bold">Nome Completo <span class="text-destructive">*</span></Label>
+                  <Input 
+                    id="full_name" 
+                    v-model="form.full_name" 
+                    placeholder="Nome e Cognome" 
+                    class="h-11"
+                    autocomplete="off"
+                  />
+                  <p class="text-[11px] text-muted-foreground">Questo sarà il nome principale visualizzato sul memoriale.</p>
+                </div>
+                <div class="grid gap-2">
+                  <Label for="slogan" class="font-bold">Slogan / Citazione</Label>
+                  <Input 
+                    id="slogan" 
+                    v-model="form.slogan" 
+                    placeholder="Esempio: Per sempre nel nostro cuore" 
+                    class="h-11"
+                  />
+                </div>
+              </div>
+              
+              <!-- Step 2: Storia -->
+              <div v-else-if="currentStep === 2" class="space-y-4" key="step2">
+                <div class="grid grid-cols-2 gap-4">
+                  <div class="grid gap-2">
+                    <Label for="birth_date" class="font-bold">Data di Nascita</Label>
+                    <Input id="birth_date" type="date" v-model="form.birth_date" />
+                  </div>
+                  <div class="grid gap-2">
+                    <Label for="death_date" class="font-bold">Data di Morte</Label>
+                    <Input id="death_date" type="date" v-model="form.death_date" />
+                  </div>
+                </div>
+                <div class="grid gap-2 pt-2">
+                  <Label for="biography" class="font-bold">Biografia Breve</Label>
+                  <textarea 
+                    id="biography" 
+                    v-model="form.biography"
+                    class="flex min-h-[140px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    placeholder="Racconta i momenti importanti della sua vita..."
+                  />
+                </div>
+              </div>
+
+              <!-- Step 3: Impostazioni -->
+              <div v-else-if="currentStep === 3" class="space-y-4" key="step3">
+                <div class="p-5 bg-muted/30 rounded-xl border border-border/50 text-sm leading-relaxed mb-4">
+                  <span class="font-semibold flex items-center gap-2 mb-2">
+                    <IconInfoCircle class="size-4 text-primary" /> Info QR Code
+                  </span>
+                  Configura dove punterà il codice QR associato a questa lapide prima di essere applicato.
+                </div>
+                <div class="grid gap-2">
+                  <Label for="link" class="font-bold">Link Personalizzato (Opzionale)</Label>
+                  <Input 
+                    id="link" 
+                    v-model="form.link" 
+                    placeholder="https://" 
+                    class="h-11"
+                  />
+                  <p class="text-[11px] text-muted-foreground">Se lasciato vuoto, il QR punterà alla pagina standard del memoriale generata per lui/lei.</p>
+                </div>
+              </div>
+
+              <!-- Step 4: Assegnazione -->
+              <div v-else-if="currentStep === 4" class="space-y-4" key="step4">
+                <div class="grid gap-2">
+                  <Label class="font-bold">Assegnazione Cliente <span class="text-destructive">*</span></Label>
+                  <Select v-model="form.owner_id">
+                    <SelectTrigger class="h-11">
+                      <SelectValue :placeholder="loadingUsers ? 'Caricamento clienti...' : 'Seleziona un cliente'" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem v-for="user in users" :key="user.id" :value="user.id.toString()">
+                          <div class="flex items-center gap-2">
+                            <IconUser class="size-4 text-muted-foreground" />
+                            <span>{{ user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : user.username }}</span>
+                          </div>
+                        </SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  <p class="text-[11px] text-muted-foreground mt-2">
+                    Il cliente selezionato avrà i privilegi di proprietario e potrà modificare contenuti e media per questo memoriale.
+                  </p>
+                </div>
+              </div>
+            </Transition>
+          </div>
+        </div>
       </div>
 
-      <DialogFooter class="p-6 bg-muted/20 border-t border-border/50">
-        <Button variant="ghost" @click="emit('update:open', false)" :disabled="submitting">Annulla</Button>
-        <Button 
-          :disabled="!form.full_name || !form.owner_id || submitting"
-          @click="handleSave"
-          class="min-w-[140px]"
-        >
-          <IconLoader2 v-if="submitting" class="mr-2 size-4 animate-spin" />
-          <span v-else>{{ isEditing ? 'Salva Modifiche' : 'Crea Memoriale' }}</span>
-        </Button>
+      <DialogFooter class="p-6 bg-muted/30 border-t border-border/50 items-center">
+        <!-- EDIT FOOTER -->
+        <template v-if="isEditing">
+          <Button variant="ghost" @click="emit('update:open', false)" :disabled="submitting">Annulla</Button>
+          <Button 
+            :disabled="!form.full_name || submitting"
+            @click="handleSave"
+            class="min-w-[150px]"
+          >
+            <IconLoader2 v-if="submitting" class="mr-2 size-4 animate-spin" />
+            <span v-else>Salva Modifiche</span>
+          </Button>
+        </template>
+
+        <!-- WIZARD FOOTER -->
+        <template v-else>
+          <div class="w-full flex justify-between items-center">
+            <Button 
+              v-if="currentStep === 1" 
+              variant="ghost" 
+              @click="emit('update:open', false)" 
+              :disabled="submitting"
+            >
+              Annulla
+            </Button>
+            <Button 
+              v-else 
+              variant="outline" 
+              @click="goBack" 
+              :disabled="submitting"
+            >
+              <IconArrowLeft class="size-4 mr-2" /> Indietro
+            </Button>
+
+            <Button 
+              v-if="currentStep < wizardSteps.length" 
+              @click="goNext" 
+              :disabled="!canProceed"
+              class="min-w-[120px]"
+            >
+              Avanti <IconArrowRight class="size-4 ml-2" />
+            </Button>
+            <Button 
+              v-else 
+              :disabled="!canProceed || submitting" 
+              @click="handleSave"
+              class="min-w-[160px]"
+            >
+              <IconLoader2 v-if="submitting" class="mr-2 size-4 animate-spin" />
+              <span v-else>Crea Memoriale</span>
+            </Button>
+          </div>
+        </template>
       </DialogFooter>
     </DialogContent>
   </Dialog>
 </template>
+
+<style scoped>
+.slide-fade-enter-active {
+  transition: all 0.3s ease-out;
+}
+.slide-fade-leave-active {
+  transition: all 0.2s cubic-bezier(1, 0.5, 0.8, 1);
+}
+.slide-fade-enter-from {
+  transform: translateX(15px);
+  opacity: 0;
+}
+.slide-fade-leave-to {
+  transform: translateX(-15px);
+  opacity: 0;
+}
+</style>
