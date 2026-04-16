@@ -49,7 +49,7 @@ function downloadQRCode() {
 
 <template>
   <Dialog :open="open" @update:open="emit('update:open', $event)">
-    <DialogContent class="sm:max-w-[450px] p-0 overflow-hidden border-none shadow-2xl">
+    <DialogContent class="sm:max-w-112.5 p-0 overflow-hidden border-none shadow-2xl">
       <DialogHeader class="p-6 bg-primary text-primary-foreground">
         <div class="flex items-center gap-3">
           <div class="p-2 bg-white/10 rounded-lg">
