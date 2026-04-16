@@ -87,7 +87,7 @@ const totalMemorials = computed(() => statusData.value.reduce((acc, d) => acc + 
           </div>
         </div>
       </CardHeader>
-      <CardContent class="flex-1 flex flex-col justify-center min-h-[220px] relative p-4">
+      <CardContent class="flex-1 flex flex-col justify-center min-h-55 relative p-4">
         <div v-if="loading" class="h-full flex items-center justify-center">
            <div class="size-20 rounded-full border-4 border-muted/30 border-t-primary animate-spin"></div>
         </div>
@@ -95,7 +95,7 @@ const totalMemorials = computed(() => statusData.value.reduce((acc, d) => acc + 
            <IconLayoutDashboard class="size-10 mb-2 text-muted-foreground/50" />
            <p class="text-xs font-medium">Nessun memoriale</p>
         </div>
-        <div v-else class="relative size-full max-h-[170px] mx-auto">
+        <div v-else class="relative size-full max-h-42.5 mx-auto">
           <VisSingleContainer :data="statusData" :margin="{ top: 5, right: 5, bottom: 5, left: 5 }">
             <VisDonut
               :value="(d: any) => d.count"
@@ -132,7 +132,7 @@ const totalMemorials = computed(() => statusData.value.reduce((acc, d) => acc + 
           </div>
         </div>
       </CardHeader>
-      <CardContent class="flex-1 flex items-center min-h-[220px] p-4 pt-0">
+      <CardContent class="flex-1 flex items-center min-h-55 p-4 pt-0">
         <div v-if="loading" class="w-full h-full flex items-center justify-center p-8">
             <div class="w-full h-20 bg-muted/30 rounded-lg animate-pulse" />
         </div>

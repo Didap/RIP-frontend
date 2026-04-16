@@ -11,11 +11,11 @@ defineProps<{
   <div class="w-full relative py-4">
     <div class="relative flex justify-between w-full z-10">
       <!-- Background Line -->
-      <div class="absolute left-0 top-[15px] w-full h-[2px] bg-muted -z-10"></div>
+      <div class="absolute left-0 top-3.75 w-full h-0.5 bg-muted -z-10"></div>
       
       <!-- Progress Line -->
       <div 
-        class="absolute left-0 top-[15px] h-[2px] bg-primary transition-all duration-500 ease-in-out -z-10"
+        class="absolute left-0 top-3.75 h-0.5 bg-primary transition-all duration-500 ease-in-out -z-10"
         :style="{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }"
       ></div>
       
