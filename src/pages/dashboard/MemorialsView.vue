@@ -173,7 +173,7 @@ const columns: ColumnDef<Memorial, any>[] = [
         h(Button, {
           variant: 'ghost', size: 'icon', class: 'size-8', title: 'Vedi pagina',
           onClick: () => {
-            const baseUrl = import.meta.env.VITE_WEBSITE_URL || 'https://memora.life'
+            const baseUrl = import.meta.env.VITE_APP_URL || window.location.origin
             window.open(`${baseUrl}/memorial/${memorial.slug}`, '_blank')
           }
         }, () => h(IconEye, { class: 'size-4' })),

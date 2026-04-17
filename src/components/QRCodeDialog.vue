@@ -22,7 +22,7 @@ const emit = defineEmits(['update:open'])
 const copied = ref(false)
 
 const memorialLink = computed(() => {
-  const baseUrl = import.meta.env.VITE_WEBSITE_URL || 'https://memora.life'
+  const baseUrl = import.meta.env.VITE_APP_URL || window.location.origin
   return props.memorial?.link || `${baseUrl}/memorial/${props.memorial?.slug || ''}`
 })
 

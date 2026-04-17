@@ -12,6 +12,12 @@ const router = createRouter({
       meta: { requiresAuth: false },
     },
     {
+      path: '/m/:slug',
+      name: 'PublicMemorial',
+      component: () => import('@/pages/PublicMemorial.vue'),
+      meta: { requiresAuth: false },
+    },
+    {
       path: '/',
       component: DashboardLayout,
       meta: { requiresAuth: true },
@@ -51,6 +57,12 @@ const router = createRouter({
           meta: { title: 'Staff' }
         },
       ],
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'NotFound',
+      component: () => import('@/pages/NotFound.vue'),
+      meta: { requiresAuth: false },
     },
   ],
 })
