@@ -18,7 +18,7 @@ export async function postPublicContribution(
   contentType: 'flower' | 'candle' | 'text',
   textContent?: string,
 ): Promise<{ data: any } | null> {
-  const response = await fetch(`${API_URL}/api/tombstones/memorial/${slug}/contribute`, {
+  const response = await fetch(`${API_URL}/api/tombstones/tombstone/${slug}/contribute`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ content_type: contentType, text_content: textContent || null }),
