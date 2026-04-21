@@ -6,7 +6,13 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
-      path: '/login',
+      path: '/',
+      name: 'Landing',
+      component: () => import('@/pages/LandingView.vue'),
+      meta: { requiresAuth: false },
+    },
+    {
+      path: '/backoffice',
       name: 'Login',
       component: () => import('@/pages/LoginView.vue'),
       meta: { requiresAuth: false },
@@ -18,16 +24,12 @@ const router = createRouter({
       meta: { requiresAuth: false },
     },
     {
-      path: '/',
+      path: '/dashboard-root', // Temporary path for dashboard container
       component: DashboardLayout,
       meta: { requiresAuth: true },
       children: [
         {
-          path: '',
-          redirect: '/dashboard',
-        },
-        {
-          path: 'dashboard',
+          path: '/dashboard',
           name: 'Dashboard',
           component: () => import('@/pages/dashboard/Dashboard.vue'),
           meta: { title: 'Dashboard' }
@@ -37,6 +39,12 @@ const router = createRouter({
           name: 'Memorials',
           component: () => import('@/pages/dashboard/MemorialsView.vue'),
           meta: { title: 'Memoriali' }
+        },
+        {
+          path: 'memorials/:id',
+          name: 'MemorialDetail',
+          component: () => import('@/pages/dashboard/MemorialDetailView.vue'),
+          meta: { title: 'Dettaglio Memoriale' }
         },
         {
           path: 'memorials/editor/:id',

@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { h, ref, onMounted } from 'vue'
+import { h, ref, onMounted, computed } from 'vue'
 import type { ColumnDef } from '@tanstack/vue-table'
-import { IconCheck, IconX } from '@tabler/icons-vue'
+import { IconCheck, IconX, IconUserCircle } from '@tabler/icons-vue'
 
 import BaseDataTable from '@/components/BaseDataTable.vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
 import { 
   Dialog, 
   DialogContent, 
@@ -14,6 +15,7 @@ import {
   DialogDescription,
   DialogFooter
 } from '@/components/ui/dialog'
+import { Switch } from '@/components/ui/switch'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { fetchApi } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
@@ -30,23 +32,30 @@ interface Contribution {
   text_content: string | null
   createdAt: string
   author?: { username: string }
-  tombstone?: { full_name: string }
+  tombstone?: { full_name: string; documentId: string }
 }
 
 const { agencyId } = useAuth()
 const data = ref<Contribution[]>([])
 const loading = ref(true)
+const showOnlyPending = ref(true) // Attivo di default
 const processingIds = ref<Set<string>>(new Set())
 const selectedContribution = ref<Contribution | null>(null)
 
 const isDeleteDialogOpen = ref(false)
 const contributionToDelete = ref<string | null>(null)
 
+// Computed for filtered data - more robust check
+const filteredData = computed(() => {
+  if (!showOnlyPending.value) return data.value
+  return data.value.filter(c => !c.is_approved)
+})
+
 async function loadContributions() {
   if (!agencyId.value) return
   loading.value = true
   try {
-    const endpoint = `/api/contributions?filters[tombstone][agency][id][$eq]=${agencyId.value}&filters[content_type][$eq]=text&populate[tombstone][fields]=full_name&populate[author][fields]=username&sort=createdAt:desc`
+    const endpoint = `/api/contributions?filters[tombstone][agency][id][$eq]=${agencyId.value}&filters[content_type][$eq]=text&populate[tombstone][fields][0]=full_name&populate[tombstone][fields][1]=documentId&populate[author][fields]=username&sort=createdAt:desc`
     const response = await fetchApi(endpoint)
     
     const rawData = response.data || response
@@ -125,8 +134,9 @@ const columns: ColumnDef<Contribution, any>[] = [
     header: 'Autore',
     cell: ({ row }) => {
       const c = row.original as Contribution
+      const name = c.author?.username || 'Anonimo'
       return h('div', { class: 'flex items-center gap-2' }, [
-        h('span', { class: 'font-medium' }, c.author?.username ?? '—'),
+        h('span', { class: 'font-medium' }, name),
         c.is_anonymous && h(Badge, { variant: 'outline', class: 'text-[10px] h-4 px-1 border-amber-200 text-amber-600 bg-amber-50' }, () => 'Privato')
       ])
     },
@@ -211,12 +221,35 @@ onMounted(loadContributions)
     <BaseDataTable
       title="Moderazione Ricordi"
       :columns="columns"
-      :data="data"
+      :data="filteredData"
       :loading="loading"
       search-placeholder="Cerca per autore o memoriale..."
-      empty-message="Nessun ricordo testuale da moderare."
+      empty-message="Nessun ricordo trovato."
       @row-click="handleRowClick"
-    />
+    >
+      <template #actions>
+        <div class="flex items-center p-1 bg-muted rounded-lg mr-4 border border-border/50">
+            <Button 
+                variant="ghost" 
+                size="sm" 
+                :class="showOnlyPending ? 'bg-background shadow-xs text-foreground' : 'text-muted-foreground'"
+                class="text-[10px] h-7 px-3 font-bold uppercase tracking-wider transition-all"
+                @click="showOnlyPending = true"
+            >
+                In Attesa
+            </Button>
+            <Button 
+                variant="ghost" 
+                size="sm" 
+                :class="!showOnlyPending ? 'bg-background shadow-xs text-foreground' : 'text-muted-foreground'"
+                class="text-[10px] h-7 px-3 font-bold uppercase tracking-wider transition-all"
+                @click="showOnlyPending = false"
+            >
+                Tutti
+            </Button>
+        </div>
+      </template>
+    </BaseDataTable>
 
     <!-- Detail Dialog -->
     <Dialog :open="!!selectedContribution" @update:open="val => !val && (selectedContribution = null)">
@@ -245,26 +278,39 @@ onMounted(loadContributions)
           </div>
         </div>
 
-        <DialogFooter class="gap-2 sm:justify-between items-center">
-          <div class="text-xs text-muted-foreground">
-            ID Contributo: #{{ selectedContribution?.id }}
+        <DialogFooter class="gap-4 sm:justify-between items-center border-t pt-4">
+          <div class="flex items-center gap-2">
+            <Button 
+                variant="outline" 
+                size="sm" 
+                class="text-xs h-8"
+                @click="selectedContribution?.tombstone?.documentId && $router.push(`/memorials/${selectedContribution.tombstone.documentId}`)"
+            >
+              <IconUserCircle class="size-3.5 mr-1.5" />
+              Vedi Memoriale
+            </Button>
           </div>
           <div class="flex gap-2">
-            <Button variant="ghost" @click="selectedContribution = null">Chiudi</Button>
-            <Button v-if="!selectedContribution?.is_approved" 
-                    variant="default" 
-                    class="bg-emerald-600 hover:bg-emerald-700"
-                    :disabled="selectedContribution && processingIds.has(selectedContribution.documentId)"
-                    @click="selectedContribution && approveContribution(selectedContribution.documentId)">
-              <IconCheck class="size-4 mr-2" />
-              Approva ora
-            </Button>
-            <Button variant="destructive" 
-                    :disabled="selectedContribution && processingIds.has(selectedContribution.documentId)"
-                    @click="selectedContribution && confirmDelete(selectedContribution.documentId)">
-              <IconX class="size-4 mr-2" />
-              Rifiuta
-            </Button>
+            <Button variant="ghost" size="sm" @click="selectedContribution = null">Chiudi</Button>
+            <div class="flex gap-2 ml-4">
+                <Button v-if="!selectedContribution?.is_approved" 
+                        variant="default" 
+                        size="sm"
+                        class="bg-emerald-600 hover:bg-emerald-700 h-8"
+                        :disabled="selectedContribution && processingIds.has(selectedContribution.documentId)"
+                        @click="selectedContribution && approveContribution(selectedContribution.documentId)">
+                  <IconCheck class="size-4 mr-2" />
+                  Approva
+                </Button>
+                <Button variant="destructive" 
+                        size="sm"
+                        class="h-8"
+                        :disabled="selectedContribution && processingIds.has(selectedContribution.documentId)"
+                        @click="selectedContribution && confirmDelete(selectedContribution.documentId)">
+                  <IconX class="size-4 mr-2" />
+                  Rifiuta
+                </Button>
+            </div>
           </div>
         </DialogFooter>
       </DialogContent>

@@ -191,6 +191,10 @@ const columns: ColumnDef<Memorial, any>[] = [
       const isPublished = memorial.lifecycle_status === 'published'
       return h('div', { class: 'flex items-center gap-1 justify-end' }, [
         h(Button, {
+          variant: 'ghost', size: 'icon', class: 'size-8 cursor-pointer text-blue-600 hover:bg-blue-50', title: 'Vedi dettaglio',
+          onClick: () => router.push(`/memorials/${memorial.id}`)
+        }, () => h(IconEye, { class: 'size-4' })),
+        h(Button, {
           variant: 'ghost', size: 'sm', class: 'gap-2 px-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50 cursor-pointer',
           onClick: () => router.push(`/memorials/editor/${memorial.id}`)
         }, () => [h(IconBrush, { class: 'size-4' }), h('span', { class: 'text-xs font-semibold' }, 'Personalizza')]),
