@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
+import { useAuth } from '@/lib/auth'
 import {
   IconCreditCard,
   IconDotsVertical,
@@ -39,6 +41,13 @@ defineProps<{
 }>()
 
 const { isMobile } = useSidebar()
+const { logout } = useAuth()
+const router = useRouter()
+
+function handleLogout() {
+  logout()
+  router.push('/login')
+}
 </script>
 
 <template>
@@ -103,7 +112,7 @@ const { isMobile } = useSidebar()
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>
+          <DropdownMenuItem @click="handleLogout">
             <IconLogout />
             Log out
           </DropdownMenuItem>

@@ -5,10 +5,10 @@ interface User {
   id: number
   username: string
   email: string
-  nome?: string
-  cognome?: string
-  tipo_utente?: string
-  agencies?: Array<{ id: number; name: string }>
+  first_name?: string
+  last_name?: string
+  role_type?: 'individual' | 'agency_admin' | 'agency_staff'
+  managed_agency?: { id: number; name: string }
 }
 
 const token = ref<string | null>(localStorage.getItem('auth_token'))
@@ -18,10 +18,7 @@ export function useAuth() {
   const isAuthenticated = computed(() => !!token.value)
 
   const agencyId = computed(() => {
-    if (user.value?.agencies && user.value.agencies.length > 0) {
-      return user.value.agencies[0].id
-    }
-    return null
+    return user.value?.managed_agency?.id || null
   })
 
   async function login(identifier: string, password: string) {
@@ -64,15 +61,14 @@ export function useAuth() {
 
       const meData = await meResponse.json()
       
-      // Step 2: Fetch full user with agencies because /users/me doesn't always support populate
-      const fullResponse = await fetch(`${API_URL}/api/users/${meData.id}?populate=agencies`, {
+      // Step 2: Fetch full user with managed_agency
+      const fullResponse = await fetch(`${API_URL}/api/users/${meData.id}?populate=managed_agency`, {
         headers: {
           'Authorization': `Bearer ${token.value}`,
         },
       })
 
       if (!fullResponse.ok) {
-        // Fallback to meData if full fetch fails
         user.value = meData
       } else {
         user.value = await fullResponse.json()

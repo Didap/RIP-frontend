@@ -26,7 +26,7 @@ async function fetchMetrics() {
     const [memorials, contributions, staff, permissions] = await Promise.all([
       fetchApi(`/api/tombstones?filters[agency][id][$eq]=${agencyId.value}&filters[lifecycle_status][$eq]=published&pagination[withCount]=true&pagination[limit]=1`),
       fetchApi(`/api/contributions?filters[tombstone][agency][id][$eq]=${agencyId.value}&filters[is_approved][$eq]=false&pagination[withCount]=true&pagination[limit]=1`),
-      fetchApi(`/api/users?filters[agencies][id][$in]=${agencyId.value}&filters[role_type][$eq]=agency_staff`),
+      fetchApi(`/api/users?filters[managed_agency][id][$eq]=${agencyId.value}&filters[role_type][$eq]=agency_staff`),
       fetchApi(`/api/tombstone-permissions?filters[tombstone][agency][id][$eq]=${agencyId.value}&filters[access_level][$eq]=owner&pagination[withCount]=true&pagination[limit]=1`)
     ])
 
@@ -40,7 +40,6 @@ async function fetchMetrics() {
 }
 
 watch(agencyId, fetchMetrics, { immediate: true })
-onMounted(fetchMetrics)
 
 const kpis = [
   {
@@ -83,13 +82,13 @@ const kpis = [
     <Card 
       v-for="kpi in kpis" 
       :key="kpi.title"
-      class="group relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-border/40 bg-card/60 backdrop-blur-sm"
+      class="group relative overflow-hidden transition-shadow duration-300 ease-out border-border/40 bg-card shadow-sm hover:shadow-md"
     >
       <router-link :to="kpi.link" class="absolute inset-0 z-10" />
-      <CardContent class="p-4 flex items-center gap-4">
+      <CardContent class="p-3 flex items-center gap-3">
         <!-- Icon Side -->
-        <div :class="['shrink-0 p-3 rounded-xl transition-all duration-300 group-hover:scale-110 shadow-sm', kpi.bg, kpi.color]">
-          <component :is="kpi.icon" class="size-6" />
+        <div :class="['shrink-0 p-2.5 rounded-xl transition-all duration-300 group-hover:scale-110 shadow-sm', kpi.bg, kpi.color]">
+          <component :is="kpi.icon" class="size-5" />
         </div>
         
         <!-- Text Side -->

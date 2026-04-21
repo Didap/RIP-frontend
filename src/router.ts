@@ -12,7 +12,7 @@ const router = createRouter({
       meta: { requiresAuth: false },
     },
     {
-      path: '/m/:slug',
+      path: '/memorial/:slug',
       name: 'PublicMemorial',
       component: () => import('@/pages/PublicMemorial.vue'),
       meta: { requiresAuth: false },
@@ -39,6 +39,12 @@ const router = createRouter({
           meta: { title: 'Memoriali' }
         },
         {
+          path: 'memorials/editor/:id',
+          name: 'MemorialEditor',
+          component: () => import('@/pages/dashboard/MemorialEditorView.vue'),
+          meta: { title: 'Personalizza Memoriale' }
+        },
+        {
           path: 'clients',
           name: 'Clients',
           component: () => import('@/pages/dashboard/ClientsView.vue'),
@@ -55,6 +61,12 @@ const router = createRouter({
           name: 'Staff',
           component: () => import('@/pages/dashboard/StaffView.vue'),
           meta: { title: 'Staff' }
+        },
+        {
+          path: 'credits',
+          name: 'Crediti',
+          component: () => import('@/pages/dashboard/CreditsView.vue'),
+          meta: { title: 'Crediti e Generazione' }
         },
       ],
     },

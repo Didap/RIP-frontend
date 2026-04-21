@@ -1,359 +1,323 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { MemorialData } from './types'
 
-defineProps<{ memorial: MemorialData; preview?: boolean }>()
+const props = defineProps<{ memorial: MemorialData; preview?: boolean }>()
+const emit = defineEmits<{ 'edit-section': [sectionId: string] }>()
+
+const customizationStyle = computed(() => {
+  const c = props.memorial.customization || {}
+  const primary = c.primary_color || '#6366F1'
+  const bg = c.background_color || '#F8FAFC'
+  
+  return {
+    '--primary-color': primary,
+    '--bg-color': bg,
+    '--bg-overlay': `${bg}1A`, // 10% opacity hex
+    '--text-main': '#0F172A',
+    '--font-sans': "'Inter', sans-serif",
+    '--radius': '16px',
+    '--shadow': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05)',
+  }
+})
+
+function stripHtml(html: string | undefined) {
+  if (!html) return ''
+  return html.replace(/<[^>]*>?/gm, '')
+}
 
 function formatDate(date: string | undefined | null) {
   if (!date) return ''
-  return new Date(date).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })
+  const d = new Date(date)
+  const now = new Date()
+  if (d.toDateString() === now.toDateString()) return 'Oggi'
+  return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
 }
 
-function getInitials(name: string) {
-  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
-}
-
-function authorName(author: any) {
-  if (!author) return 'Anonimo'
-  return [author.first_name, author.last_name].filter(Boolean).join(' ') || author.username
-}
-
-function timeAgo(date: string) {
-  const diff = Date.now() - new Date(date).getTime()
-  const minutes = Math.floor(diff / 60000)
-  if (minutes < 60) return `${minutes}m`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h`
-  const days = Math.floor(hours / 24)
-  if (days < 30) return `${days}g`
-  return formatDate(date)
-}
+const birthYear = computed(() => props.memorial.dates?.birth?.slice(0, 4) || '')
+const deathYear = computed(() => props.memorial.dates?.death?.slice(0, 4) || '')
 </script>
 
 <template>
-  <div class="modern-template">
-    <!-- Header with profile image -->
-    <div class="header">
-      <div v-if="memorial.profile_image" class="profile-img">
-        <img
-          :src="memorial.profile_image.url"
-          :alt="memorial.profile_image.alternativeText || memorial.full_name"
-          class="w-full h-full object-cover"
-        />
-      </div>
-      <div v-else class="profile-placeholder">
-        {{ getInitials(memorial.full_name) }}
-      </div>
-      <div class="header-info">
-        <h1 class="name">{{ memorial.full_name }}</h1>
-        <div v-if="memorial.dates" class="dates">
-          <span v-if="memorial.dates.birth">{{ formatDate(memorial.dates.birth) }}</span>
-          <span v-if="memorial.dates.birth && memorial.dates.death"> — </span>
-          <span v-if="memorial.dates.death">{{ formatDate(memorial.dates.death) }}</span>
-        </div>
-      </div>
+  <div class="app-modern" :style="customizationStyle">
+    <!-- Cover Image (Matching App) -->
+    <div class="modern-hero" :class="{ 'cursor-pointer': preview }" @click="preview && emit('edit-section', 'contenuti')">
+       <img v-if="memorial.cover_image" :src="memorial.cover_image.url" class="full-img" />
+       <div v-else class="placeholder-bg"></div>
     </div>
 
-    <!-- Slogan badge -->
-    <div v-if="memorial.slogan" class="slogan-badge">
-      {{ memorial.slogan }}
-    </div>
+    <div class="content-wrap">
+       <!-- Modern Header with Pill (Matching App) -->
+       <header class="modern-header">
+           <div class="pill">MEMORIALE</div>
+           <h1 class="modern-title">{{ memorial.full_name }}</h1>
+           <p class="modern-dates">{{ birthYear }} — {{ deathYear }}</p>
+       </header>
 
-    <!-- Stats -->
-    <div class="stats-row">
-      <div class="stat-chip">
-        <span>🌸</span> {{ memorial.stats.flowers }} Fiori
-      </div>
-      <div class="stat-chip">
-        <span>🕯️</span> {{ memorial.stats.candles }} Candele
-      </div>
-      <div class="stat-chip">
-        <span>💬</span> {{ memorial.stats.memories }} Ricordi
-      </div>
-    </div>
-
-    <!-- Two-column layout -->
-    <div class="content-grid">
-      <div class="content-main">
-        <!-- Biography -->
-        <div v-if="memorial.biography" class="bio-card">
-          <h2 class="card-title">La sua storia</h2>
-          <div class="bio-content" v-html="memorial.biography"></div>
-        </div>
-
-        <!-- Connections -->
-        <div v-if="memorial.connections.length > 0" class="connections-card">
-          <h2 class="card-title">Famiglia</h2>
-          <div class="tags-list">
-            <span
-              v-for="(conn, i) in memorial.connections"
-              :key="i"
-              class="tag"
-            >
-              {{ conn.relation_type }}: {{ conn.user?.first_name }} {{ conn.user?.last_name }}
-            </span>
+       <!-- Bento Grid (Stacked on Mobile as in App) -->
+       <div class="modern-bento">
+          <div v-if="!memorial.customization?.hide_stats" class="stats-row">
+             <div class="stat-card">
+                 <span class="v">{{ memorial.stats.flowers }}</span>
+                 <span class="l">Fiori</span>
+             </div>
+             <div class="stat-card">
+                 <span class="v">{{ memorial.stats.candles }}</span>
+                 <span class="l">Luci</span>
+             </div>
           </div>
-        </div>
-      </div>
 
-      <div class="content-side">
-        <!-- Contributions feed -->
-        <div class="contributions-card">
-          <h2 class="card-title">Ricordi <span class="count">({{ memorial.stats.total }})</span></h2>
-          <div v-if="memorial.contributions.length === 0" class="empty-state">
-            Nessun ricordo ancora
+          <!-- Bio Card -->
+          <article v-if="memorial.biography && !memorial.customization?.hide_biography" 
+                   class="bio-card"
+                   :class="{ 'cursor-pointer': preview }"
+                   @click="preview && emit('edit-section', 'contenuti')">
+             <p class="bio-text">{{ stripHtml(memorial.biography) }}</p>
+          </article>
+       </div>
+
+       <!-- Section Title for Contributions -->
+       <div class="contrib-title">
+          Timeline dei Ricordi
+       </div>
+
+       <!-- Timeline List -->
+       <div class="timeline-list">
+          <div v-if="memorial.contributions.filter(c => !['flower', 'candle'].includes(c.content_type)).length > 0">
+             <div v-for="(c, i) in [...memorial.contributions]
+                  .filter(c => !['flower', 'candle'].includes(c.content_type))
+                  .sort((a,b) => new Date(b.event_date || b.createdAt).getTime() - new Date(a.event_date || a.createdAt).getTime())" 
+                  :key="c.id" 
+                  class="timeline-item">
+               <div class="timeline-line" v-if="i !== memorial.contributions.filter(c => !['flower', 'candle'].includes(c.content_type)).length - 1"></div>
+               <div class="timeline-marker">
+                  <span v-if="c.content_type === 'photo'">🖼️</span>
+                  <span v-else>💬</span>
+               </div>
+               <div class="timeline-content">
+                  <div class="timeline-header">
+                     <span class="author">{{ c.author?.username || 'Anonimo' }}</span>
+                     <span class="date">{{ c.event_date ? new Date(c.event_date).getFullYear() : formatDate(c.createdAt) }}</span>
+                  </div>
+                  <div v-if="c.text_content" class="bubble">
+                     <p class="text">{{ stripHtml(c.text_content) }}</p>
+                  </div>
+               </div>
+             </div>
           </div>
-          <div v-else class="contributions-feed">
-            <div
-              v-for="c in memorial.contributions"
-              :key="c.id"
-              class="feed-item"
-            >
-              <div class="feed-avatar">
-                {{ c.content_type === 'flower' ? '🌸' : c.content_type === 'candle' ? '🕯️' : '💭' }}
-              </div>
-              <div class="feed-content">
-                <div class="feed-header">
-                  <span class="feed-author">{{ authorName(c.author) }}</span>
-                  <span class="feed-time">{{ timeAgo(c.createdAt) }}</span>
-                </div>
-                <div v-if="c.text_content" class="feed-text" v-html="c.text_content"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+          <p v-else class="empty-text">Ancora nessun ricordo nella storia.</p>
+       </div>
     </div>
+
+    <footer class="modern-footer">
+        RIP · Community Edition
+    </footer>
   </div>
 </template>
 
 <style scoped>
-.modern-template {
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-  color: #0F172A;
-  padding: 0;
-  background: #FFFFFF;
+.app-modern {
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  padding-bottom: 5rem;
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
+.modern-hero {
+  width: 100%;
+  height: 220px;
+  background: #E2E8F0;
+  overflow: hidden;
+}
+
+.full-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.placeholder-bg {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%);
+}
+
+.content-wrap {
+  max-width: 500px;
+  margin: 0 auto;
   padding: 1.5rem;
 }
 
-.profile-img {
-  width: 80px;
-  height: 80px;
-  border-radius: 20px;
-  overflow: hidden;
-  flex-shrink: 0;
+.modern-header {
+  margin-bottom: 2rem;
 }
 
-.profile-placeholder {
-  width: 80px;
-  height: 80px;
-  border-radius: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #F1F5F9;
-  font-size: 1.5rem;
-  color: #64748B;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-.header-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.name {
-  font-size: 1.5rem;
-  font-weight: 700;
-  line-height: 1.2;
-  margin: 0;
-}
-
-.dates {
-  font-size: 0.8rem;
-  color: #64748B;
-  margin-top: 0.25rem;
-}
-
-.slogan-badge {
-  display: inline-block;
-  margin: 0 1.5rem;
-  padding: 0.4rem 1rem;
-  background: #10B981;
+.pill {
+  background: var(--primary-color);
   color: white;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 500;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  display: inline-block;
+  margin-bottom: 0.75rem;
+}
+
+.modern-title {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.modern-dates {
+  font-size: 0.95rem;
+  color: #64748B;
+  margin-top: 0.4rem;
+}
+
+/* Bento */
+.modern-bento {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 3rem;
 }
 
 .stats-row {
   display: flex;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem 1rem;
-}
-
-.stat-chip {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.3rem 0.7rem;
-  background: #F8FAFC;
-  border-radius: 8px;
-  font-size: 0.75rem;
-  color: #475569;
-  font-weight: 500;
-}
-
-.content-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  padding: 0 1.5rem 1.5rem;
-}
-
-.content-main {
-  display: flex;
-  flex-direction: column;
   gap: 1rem;
 }
 
-.content-side {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+.stat-card {
+  flex: 1;
+  background: white;
+  padding: 1.5rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
 }
 
-.card-title {
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #64748B;
-  margin: 0 0 0.75rem;
-}
-
-.count {
-  font-weight: 400;
-  color: #94A3B8;
-}
+.stat-card .v { display: block; font-size: 1.5rem; font-weight: 800; }
+.stat-card .l { font-size: 0.65rem; text-transform: uppercase; color: #94A3B8; font-weight: 700; margin-top: 2px; }
 
 .bio-card {
-  background: #F8FAFC;
-  border-radius: 16px;
-  padding: 1.25rem;
+  background: white;
+  padding: 1.5rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
 }
 
-.bio-content {
-  font-size: 0.85rem;
-  line-height: 1.7;
-  color: #475569;
+.bio-text {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #334155;
 }
 
-.bio-content :deep(p) {
-  margin-bottom: 0.5rem;
-}
-
-.connections-card {
-  background: #F8FAFC;
-  border-radius: 16px;
-  padding: 1.25rem;
-}
-
-.tags-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-}
-
-.tag {
-  display: inline-block;
-  padding: 0.25rem 0.6rem;
-  background: #E2E8F0;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  color: #475569;
-}
-
-.contributions-card {
-  background: #F8FAFC;
-  border-radius: 16px;
-  padding: 1.25rem;
-}
-
-.empty-state {
-  text-align: center;
+/* Timeline */
+.contrib-title {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 700;
   color: #94A3B8;
-  font-size: 0.85rem;
-  padding: 2rem 0;
+  margin-bottom: 1.5rem;
 }
 
-.contributions-feed {
+.timeline-list {
+  position: relative;
+}
+
+.timeline-item {
   display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  max-height: 500px;
-  overflow-y: auto;
+  position: relative;
+  padding-bottom: 2rem;
 }
 
-.feed-item {
-  display: flex;
-  gap: 0.75rem;
+.timeline-line {
+  position: absolute;
+  left: 15px;
+  top: 32px;
+  bottom: 0;
+  width: 2px;
+  background: #E2E8F0;
 }
 
-.feed-avatar {
-  flex-shrink: 0;
+.timeline-marker {
   width: 32px;
   height: 32px;
+  background: white;
+  border: 2px solid #E2E8F0;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #FFFFFF;
-  border-radius: 50%;
-  font-size: 1rem;
+  z-index: 1;
+  flex-shrink: 0;
+  box-shadow: var(--shadow);
 }
 
-.feed-content {
+.timeline-content {
+  margin-left: 1rem;
   flex: 1;
-  min-width: 0;
 }
 
-.feed-header {
+.timeline-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  margin-bottom: 0.2rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
 }
 
-.feed-author {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #0F172A;
+.author {
+  font-weight: 700;
+  font-size: 0.9rem;
 }
 
-.feed-time {
-  font-size: 0.7rem;
+.date {
+  font-size: 0.75rem;
   color: #94A3B8;
 }
 
-.feed-text {
-  font-size: 0.8rem;
-  color: #475569;
-  line-height: 1.4;
+.bubble {
+  background: white;
+  padding: 1rem;
+  border-radius: 12px;
+  border-left: 3px solid var(--primary-color);
+  box-shadow: var(--shadow);
 }
 
-.feed-text :deep(p) {
+.text {
+  font-size: 0.9rem;
+  color: #475569;
+  line-height: 1.5;
   margin: 0;
 }
 
-@media (max-width: 640px) {
-  .content-grid {
-    grid-template-columns: 1fr;
-  }
+.action-text {
+  font-size: 0.85rem;
+  font-style: italic;
+  color: #94A3B8;
+}
+
+.empty-text {
+  color: #94A3B8;
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.modern-footer {
+  text-align: center;
+  padding-top: 4rem;
+  font-size: 0.7rem;
+  color: #CBD5E1;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
+
+@media (max-width: 480px) {
+  .modern-title { font-size: 1.75rem; }
 }
 </style>

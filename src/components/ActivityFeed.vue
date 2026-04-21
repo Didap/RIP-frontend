@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
-import { useTimeAgo } from '@vueuse/core'
 import { 
   IconCirclePlus, 
-  IconMessagePlus, 
   IconActivity,
   IconMessageShare
 } from '@tabler/icons-vue'
@@ -17,12 +15,28 @@ interface Activity {
   title: string
   subtitle: string
   createdAt: string
+  time_ago: string
   icon: any
 }
 
 const { agencyId } = useAuth()
 const activities = ref<Activity[]>([])
 const loading = ref(true)
+
+function formatRelativeTime(date: string) {
+  const now = new Date()
+  const past = new Date(date)
+  const diffInMs = now.getTime() - past.getTime()
+  const diffInSec = Math.floor(diffInMs / 1000)
+  const diffInMin = Math.floor(diffInSec / 60)
+  const diffInHours = Math.floor(diffInMin / 60)
+  const diffInDays = Math.floor(diffInHours / 24)
+
+  if (diffInDays > 0) return `${diffInDays}g fa`
+  if (diffInHours > 0) return `${diffInHours}h fa`
+  if (diffInMin > 0) return `${diffInMin}m fa`
+  return 'adesso'
+}
 
 async function fetchActivities() {
   if (!agencyId.value) return
@@ -33,27 +47,35 @@ async function fetchActivities() {
       fetchApi(`/api/contributions?filters[tombstone][agency][id][$eq]=${agencyId.value}&populate[tombstone][fields]=full_name&sort=createdAt:desc&pagination[limit]=5`)
     ])
 
-    const memorials = (memorialsRes.data ?? memorialsRes).map((m: any) => ({
-      id: `m-${m.id}`,
-      type: 'memorial' as const,
-      title: 'Nuovo Memoriale',
-      subtitle: (m.attributes?.full_name ?? m.full_name),
-      createdAt: (m.attributes?.createdAt ?? m.createdAt),
-      icon: IconCirclePlus
-    }))
+    const memorials = (memorialsRes.data ?? memorialsRes).map((m: any) => {
+      const date = (m.attributes?.createdAt ?? m.createdAt)
+      return {
+        id: `m-${m.id}`,
+        type: 'memorial' as const,
+        title: 'Nuovo Memoriale',
+        subtitle: (m.attributes?.full_name ?? m.full_name),
+        createdAt: date,
+        time_ago: formatRelativeTime(date),
+        icon: IconCirclePlus
+      }
+    })
 
-    const contributions = (contributionsRes.data ?? contributionsRes).map((c: any) => ({
-      id: `c-${c.id}`,
-      type: 'contribution' as const,
-      title: 'Nuovo Contributo',
-      subtitle: `Per ${(c.attributes?.tombstone?.data?.attributes?.full_name ?? c.tombstone?.full_name ?? 'un memoriale')}`,
-      createdAt: (c.attributes?.createdAt ?? c.createdAt),
-      icon: IconMessageShare
-    }))
+    const contributions = (contributionsRes.data ?? contributionsRes).map((c: any) => {
+      const date = (c.attributes?.createdAt ?? c.createdAt)
+      return {
+        id: `c-${c.id}`,
+        type: 'contribution' as const,
+        title: 'Nuovo Contributo',
+        subtitle: `Per ${(c.attributes?.tombstone?.data?.attributes?.full_name ?? c.tombstone?.full_name ?? 'un memoriale')}`,
+        createdAt: date,
+        time_ago: formatRelativeTime(date),
+        icon: IconMessageShare
+      }
+    })
 
     activities.value = [...memorials, ...contributions]
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 10)
+      .slice(0, 5)
   } catch (error) {
     console.error('Error fetching activities:', error)
   } finally {
@@ -62,16 +84,11 @@ async function fetchActivities() {
 }
 
 watch(agencyId, fetchActivities, { immediate: true })
-onMounted(fetchActivities)
-
-function getTimeAgo(date: string) {
-  return useTimeAgo(new Date(date)).value
-}
 </script>
 
 <template>
-  <Card class="flex flex-col h-full transition-all border-border/40 bg-card/60 backdrop-blur-sm shadow-sm overflow-hidden">
-    <CardHeader class="pb-2 border-b border-border/10 bg-muted/20">
+  <Card class="flex flex-col h-full border-border/40 bg-card shadow-sm overflow-hidden transition-shadow duration-300 ease-out hover:shadow-md">
+    <CardHeader class="p-3 border-b border-border/10 bg-muted/20">
       <div class="flex items-center gap-2">
         <div class="p-1 px-1.5 rounded-md bg-purple-500/10 text-purple-500">
           <IconActivity class="size-3.5" />
@@ -82,7 +99,7 @@ function getTimeAgo(date: string) {
         </div>
       </div>
     </CardHeader>
-    <CardContent class="flex-1 p-0 overflow-y-auto">
+    <CardContent class="flex-1 p-0">
       <div v-if="loading" class="p-6 space-y-6">
         <div v-for="i in 4" :key="i" class="flex items-start gap-4 animate-pulse">
           <div class="size-8 rounded-full bg-muted/30" />
@@ -101,14 +118,14 @@ function getTimeAgo(date: string) {
         <p class="text-[11px] text-muted-foreground">Inizia a gestire i tuoi memoriali.</p>
       </div>
 
-      <div v-else class="relative p-6">
+      <div v-else class="relative p-3 px-6">
         <!-- Vertical Line -->
         <div class="absolute left-[39.5px] top-6 bottom-6 w-px bg-border/40" />
         
-        <div class="space-y-6">
+        <div class="space-y-4">
           <div v-for="activity in activities" :key="activity.id" class="relative flex items-start gap-4 group">
             <div :class="[
-              'relative z-10 size-7 rounded-full flex items-center justify-center border-2 border-background ring-4 ring-muted/5 transition-all group-hover:scale-110 group-hover:ring-muted/10',
+              'relative z-10 size-7 rounded-full flex items-center justify-center border-2 border-background ring-4 ring-muted/5 transition-[transform,ring] duration-300 ease-out group-hover:scale-110 group-hover:ring-muted/10',
               activity.type === 'memorial' ? 'bg-blue-500 text-white' : 'bg-emerald-500 text-white'
             ]">
               <component :is="activity.icon" class="size-3" />
@@ -120,7 +137,7 @@ function getTimeAgo(date: string) {
                   {{ activity.title }}
                 </p>
                 <time class="text-[9px] text-muted-foreground whitespace-nowrap font-bold uppercase tracking-wider bg-muted shadow-xs px-1.5 py-0.5 rounded-sm">
-                  {{ getTimeAgo(activity.createdAt) }}
+                  {{ activity.time_ago }}
                 </time>
               </div>
               <p class="text-[11px] text-muted-foreground leading-relaxed mt-0.5 line-clamp-2">

@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { useToast } from '@/lib/useToast'
+
+const toast = useToast()
 import {
   Dialog,
   DialogContent,
@@ -36,6 +40,7 @@ import {
 } from '@tabler/icons-vue'
 import TemplateCard from '@/components/templates/TemplateCard.vue'
 import WizardStepper from '@/components/WizardStepper.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 
 const props = defineProps<{
   open: boolean
@@ -45,6 +50,7 @@ const props = defineProps<{
 const emit = defineEmits(['update:open', 'created', 'updated'])
 
 const { agencyId } = useAuth()
+const router = useRouter()
 
 // Form Data
 const form = ref({
@@ -62,6 +68,9 @@ const form = ref({
 const users = ref<any[]>([])
 const loadingUsers = ref(false)
 const submitting = ref(false)
+const agencyCredits = ref(0)
+const loadingCredits = ref(false)
+const isConfirmCreateOpen = ref(false)
 
 // Tabs State (Edit Mode)
 const activeTab = ref('general')
@@ -120,6 +129,9 @@ watch(() => props.open, (newVal) => {
       resetForm()
     }
     loadUsers()
+    if (!props.memorial) {
+      loadAgency()
+    }
   }
 })
 
@@ -135,6 +147,20 @@ async function loadUsers() {
   }
 }
 
+async function loadAgency() {
+  if (!agencyId.value) return
+  loadingCredits.value = true
+  try {
+    const agencyRes = await fetchApi(`/api/agencies?filters[id][$eq]=${agencyId.value}`)
+    const agencyData = Array.isArray(agencyRes.data) ? agencyRes.data[0] : (Array.isArray(agencyRes) ? agencyRes[0] : agencyRes);
+    agencyCredits.value = agencyData?.credits || 0
+  } catch (err) {
+    console.error('Errore caricamento crediti', err)
+  } finally {
+    loadingCredits.value = false
+  }
+}
+
 function generateSlug(name: string) {
   return name
     .toLowerCase()
@@ -145,8 +171,22 @@ function generateSlug(name: string) {
 }
 
 async function handleSave() {
-  if (!form.value.full_name || !agencyId.value) return
+  const aId = agencyId.value
+  if (!form.value.full_name || !aId) return
 
+  if (!isEditing.value) {
+    if (agencyCredits.value < 100) {
+      toast.addToast('Crediti insufficienti (100 richiesti). Visita la pagina Crediti per ricaricare il saldo.', 'error')
+      return;
+    }
+    isConfirmCreateOpen.value = true
+    return;
+  }
+  
+  executeSave()
+}
+
+async function executeSave() {
   submitting.value = true
   try {
     const datesJson = {
@@ -160,7 +200,7 @@ async function handleSave() {
       template: form.value.template,
       dates: datesJson,
       biography: form.value.biography,
-      agency: parseInt(agencyId.value.toString()),
+      agency: Number(agencyId.value),
       link: form.value.link,
     }
 
@@ -202,7 +242,10 @@ async function handleSave() {
     resetForm()
   } catch (error: any) {
     console.error('Errore salvataggio memoriale:', error)
-    alert(error.message || 'Errore durante il salvataggio')
+    
+    // Check if the backend gave a specific credit error formatted by Strapi
+    const message = error?.error?.message || error?.message || 'Errore durante il salvataggio'
+    toast.addToast(message, 'error')
   } finally {
     submitting.value = false
   }
@@ -586,6 +629,14 @@ onMounted(loadUsers)
       <DialogFooter class="p-6 bg-muted/20 border-t border-border/50">
         <!-- EDIT FOOTER -->
         <template v-if="isEditing">
+          <Button
+            variant="outline"
+            class="mr-auto gap-2 text-purple-600 border-purple-200 hover:bg-purple-50"
+            @click="router.push(`/memorials/editor/${props.memorial.id}`)"
+          >
+            <IconBrush class="size-4" />
+            Personalizza Grafica
+          </Button>
           <Button variant="ghost" @click="emit('update:open', false)" :disabled="submitting">Annulla</Button>
           <Button
             :disabled="!form.full_name || !form.owner_id || submitting"
@@ -625,20 +676,33 @@ onMounted(loadUsers)
             >
               Avanti <IconArrowRight class="size-4 ml-2" />
             </Button>
-            <Button
-              v-else
-              :disabled="!canProceed || submitting"
-              @click="handleSave"
-              class="min-w-40"
-            >
-              <IconLoader2 v-if="submitting" class="mr-2 size-4 animate-spin" />
-              <span v-else>Crea Memoriale</span>
-            </Button>
+            <div v-else class="flex flex-col items-end gap-1">
+              <span class="text-[10px] text-muted-foreground mr-1">
+                Costo: <strong class="text-orange-500">100 Crediti</strong> 
+                (Saldo: {{ loadingCredits ? '...' : agencyCredits }})
+              </span>
+              <Button
+                :disabled="!canProceed || submitting || agencyCredits < 100"
+                @click="handleSave"
+                class="min-w-40"
+              >
+                <IconLoader2 v-if="submitting" class="mr-2 size-4 animate-spin" />
+                <span v-else>Crea Memoriale</span>
+              </Button>
+            </div>
           </div>
         </template>
       </DialogFooter>
     </DialogContent>
   </Dialog>
+
+  <ConfirmDialog
+    v-model:open="isConfirmCreateOpen"
+    title="Conferma Generazione"
+    :description="`Generare questa landing page utilizzerà 100 Crediti dal saldo della tua agenzia.\n\nSaldo attuale: ${agencyCredits} Crediti\nCosto: 100 Crediti\n\nVuoi procedere?`"
+    confirm-text="Conferma e Sottrai Crediti"
+    @confirm="executeSave"
+  />
 </template>
 
 <style scoped>

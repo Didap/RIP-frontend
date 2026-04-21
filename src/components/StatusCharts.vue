@@ -67,7 +67,6 @@ async function fetchData() {
 }
 
 watch(agencyId, fetchData, { immediate: true })
-onMounted(fetchData)
 
 const totalMemorials = computed(() => statusData.value.reduce((acc, d) => acc + d.count, 0))
 </script>
@@ -75,8 +74,8 @@ const totalMemorials = computed(() => statusData.value.reduce((acc, d) => acc + 
 <template>
   <div class="grid grid-cols-1 @4xl/main:grid-cols-2 gap-6 h-full">
     <!-- Memorial Status Distribution -->
-    <Card class="flex flex-col h-full transition-all border-border/40 bg-card/60 backdrop-blur-sm shadow-sm overflow-hidden">
-      <CardHeader class="pb-2 border-b border-border/10 bg-muted/20">
+    <Card class="flex flex-col h-full border-border/40 bg-card shadow-sm overflow-hidden transition-shadow duration-300 ease-out hover:shadow-md">
+      <CardHeader class="p-3 border-b border-border/10 bg-muted/20">
         <div class="flex items-center gap-2">
           <div class="p-1 px-1.5 rounded-md bg-blue-500/10 text-blue-500">
             <IconLayoutDashboard class="size-3.5" />
@@ -87,7 +86,7 @@ const totalMemorials = computed(() => statusData.value.reduce((acc, d) => acc + 
           </div>
         </div>
       </CardHeader>
-      <CardContent class="flex-1 flex flex-col justify-center min-h-55 relative p-4">
+      <CardContent class="flex-1 flex flex-col justify-center min-h-36 relative p-3">
         <div v-if="loading" class="h-full flex items-center justify-center">
            <div class="size-20 rounded-full border-4 border-muted/30 border-t-primary animate-spin"></div>
         </div>
@@ -108,7 +107,7 @@ const totalMemorials = computed(() => statusData.value.reduce((acc, d) => acc + 
           </VisSingleContainer>
         </div>
       </CardContent>
-      <CardFooter class="border-t border-border/10 px-6 py-4 flex flex-col gap-2 bg-muted/5">
+      <CardFooter class="border-t border-border/10 px-4 py-2 flex flex-col gap-1 bg-muted/5">
         <div v-for="item in statusData" :key="item.status" class="flex items-center w-full justify-between text-[12px]">
             <div class="flex items-center gap-2">
                 <div class="size-2 rounded-full" :style="{ backgroundColor: item.color }"></div>
@@ -120,8 +119,8 @@ const totalMemorials = computed(() => statusData.value.reduce((acc, d) => acc + 
     </Card>
 
     <!-- Contributions Growth -->
-    <Card class="flex flex-col h-full transition-all border-border/40 bg-card/60 backdrop-blur-sm shadow-sm overflow-hidden">
-      <CardHeader class="pb-2 border-b border-border/10 bg-muted/20">
+    <Card class="flex flex-col h-full border-border/40 bg-card shadow-sm overflow-hidden transition-shadow duration-300 ease-out hover:shadow-md">
+      <CardHeader class="p-3 border-b border-border/10 bg-muted/20">
         <div class="flex items-center gap-2">
           <div class="p-1 px-1.5 rounded-md bg-emerald-500/10 text-emerald-500">
             <IconMessage2 class="size-3.5" />
@@ -132,7 +131,7 @@ const totalMemorials = computed(() => statusData.value.reduce((acc, d) => acc + 
           </div>
         </div>
       </CardHeader>
-      <CardContent class="flex-1 flex items-center min-h-55 p-4 pt-0">
+      <CardContent class="flex-1 flex items-center min-h-36 p-3 pt-0">
         <div v-if="loading" class="w-full h-full flex items-center justify-center p-8">
             <div class="w-full h-20 bg-muted/30 rounded-lg animate-pulse" />
         </div>
@@ -173,7 +172,7 @@ const totalMemorials = computed(() => statusData.value.reduce((acc, d) => acc + 
           </VisXYContainer>
         </div>
       </CardContent>
-      <CardFooter class="border-t border-border/10 px-6 py-4 bg-muted/5 flex items-center justify-between">
+      <CardFooter class="border-t border-border/10 px-4 py-2 bg-muted/5 flex items-center justify-between">
           <p class="text-[9px] text-muted-foreground font-medium uppercase tracking-tight">Real-time update</p>
           <div class="flex items-center gap-1">
              <div class="size-1 rounded-full bg-emerald-500 animate-pulse" />

@@ -18,6 +18,18 @@ export interface MemorialData {
     text_content: string | null
     author: { username: string; first_name?: string; last_name?: string } | null
     createdAt: string
+    event_date: string | null
   }>
   stats: { total: number; flowers: number; candles: number; memories: number }
+  customization?: CustomizationData
+}
+
+export interface CustomizationData {
+  primary_color?: string
+  background_color?: string
+  font_family?: string
+  hide_stats?: boolean
+  hide_biography?: boolean
+  border_radius?: string
+  card_bg_color?: string
 }

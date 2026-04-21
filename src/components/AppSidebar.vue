@@ -16,6 +16,7 @@ import {
   IconSearch,
   IconSettings,
   IconUsers,
+  IconWallet,
 } from "@tabler/icons-vue"
 
 import NavDocuments from '@/components/NavDocuments.vue'
@@ -40,33 +41,47 @@ const data = {
     email: authUser.value?.email ?? '',
     avatar: '/avatars/shadcn.jpg',
   })),
-  navMain: [
-    {
-      title: "Dashboard",
-      url: "/dashboard",
-      icon: IconDashboard,
-    },
-    {
-      title: "Memoriali",
-      url: "/memorials",
-      icon: IconListDetails,
-    },
-    {
-      title: "Clienti",
-      url: "/clients",
-      icon: IconChartBar,
-    },
-    {
-      title: "Contributi",
-      url: "/contributions",
-      icon: IconListDetails,
-    },
-    {
-      title: "Staff",
-      url: "/staff",
-      icon: IconUsers,
-    },
-  ],
+  navMain: computed(() => {
+    const items = [
+      {
+        title: "Dashboard",
+        url: "/dashboard",
+        icon: IconDashboard,
+      },
+      {
+        title: "Memoriali",
+        url: "/memorials",
+        icon: IconListDetails,
+      },
+      {
+        title: "Clienti",
+        url: "/clients",
+        icon: IconChartBar,
+      },
+      {
+        title: "Contributi",
+        url: "/contributions",
+        icon: IconListDetails,
+      },
+      {
+        title: "Staff",
+        url: "/staff",
+        icon: IconUsers,
+      },
+      {
+        title: "Crediti",
+        url: "/credits",
+        icon: IconWallet,
+      },
+    ]
+
+    // Solo l'admin può vedere la gestione Staff
+    if (authUser.value?.role_type !== 'agency_admin') {
+      return items.filter(item => item.title !== 'Staff')
+    }
+
+    return items
+  }),
   navClouds: [
     {
       title: "Capture",
@@ -168,7 +183,7 @@ const data = {
       </SidebarMenu>
     </SidebarHeader>
     <SidebarContent>
-      <NavMain :items="data.navMain" />
+      <NavMain :items="data.navMain.value" />
     </SidebarContent>
     <SidebarFooter>
       <NavUser :user="data.user.value" />

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { h, ref, watch, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import type { ColumnDef } from '@tanstack/vue-table'
 import { 
   IconEye, 
@@ -8,16 +9,21 @@ import {
   IconToggleRight, 
   IconTrash, 
   IconUser, 
-  IconQrcode 
+  IconQrcode,
+  IconBrush
 } from '@tabler/icons-vue'
 
 import BaseDataTable from '@/components/BaseDataTable.vue'
 import MemorialDialog from '@/components/MemorialDialog.vue'
 import QRCodeDialog from '@/components/QRCodeDialog.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { fetchApi } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
+import { useToast } from '@/lib/useToast'
+
+const toast = useToast()
 
 interface Memorial {
   id: number | string
@@ -36,6 +42,7 @@ interface Memorial {
 }
 
 const { agencyId } = useAuth()
+const router = useRouter()
 const data = ref<Memorial[]>([])
 const loading = ref(true)
 
@@ -43,6 +50,9 @@ const loading = ref(true)
 const isEditDialogOpen = ref(false)
 const isQRDialogOpen = ref(false)
 const selectedMemorial = ref<Memorial | null>(null)
+
+const isDeleteDialogOpen = ref(false)
+const memorialToDelete = ref<number | null>(null)
 
 async function loadMemorials() {
   if (!agencyId.value) return
@@ -96,14 +106,24 @@ async function toggleStatus(memorial: Memorial) {
   }
 }
 
-async function deleteMemorial(id: number) {
-  if (!confirm('Sei sicuro di voler eliminare questo memoriale? L\'operazione è irreversibile.')) return
+function confirmDelete(id: number) {
+  memorialToDelete.value = id
+  isDeleteDialogOpen.value = true
+}
+
+async function doDeleteMemorial() {
+  if (!memorialToDelete.value) return
+  const id = memorialToDelete.value
   
   try {
     await fetchApi(`/api/tombstones/${id}`, { method: 'DELETE' })
     data.value = data.value.filter(m => m.id !== id)
+    toast.addToast('Memoriale eliminato con successo', 'success')
   } catch (error) {
     console.error('Errore eliminazione:', error)
+    toast.addToast('Errore durante l\'eliminazione del memoriale.', 'error')
+  } finally {
+    memorialToDelete.value = null
   }
 }
 
@@ -171,29 +191,29 @@ const columns: ColumnDef<Memorial, any>[] = [
       const isPublished = memorial.lifecycle_status === 'published'
       return h('div', { class: 'flex items-center gap-1 justify-end' }, [
         h(Button, {
-          variant: 'ghost', size: 'icon', class: 'size-8', title: 'Vedi pagina',
+          variant: 'ghost', size: 'sm', class: 'gap-2 px-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50 cursor-pointer',
+          onClick: () => router.push(`/memorials/editor/${memorial.id}`)
+        }, () => [h(IconBrush, { class: 'size-4' }), h('span', { class: 'text-xs font-semibold' }, 'Personalizza')]),
+        h(Button, {
+          variant: 'ghost', size: 'icon', class: 'size-8 cursor-pointer', title: 'Vedi pagina',
           onClick: () => {
             const baseUrl = import.meta.env.VITE_APP_URL || window.location.origin
             window.open(`${baseUrl}/memorial/${memorial.slug}`, '_blank')
           }
         }, () => h(IconEye, { class: 'size-4' })),
         h(Button, {
-          variant: 'ghost', size: 'icon', class: 'size-8', title: 'Modifica',
-          onClick: () => openEdit(memorial)
-        }, () => h(IconEdit, { class: 'size-4' })),
-        h(Button, {
-          variant: 'ghost', size: 'icon', class: 'size-8', title: 'Genera QR',
+          variant: 'ghost', size: 'icon', class: 'size-8 cursor-pointer', title: 'Genera QR',
           onClick: () => openQR(memorial)
         }, () => h(IconQrcode, { class: 'size-4 text-blue-500' })),
         h(Button, {
-          variant: 'ghost', size: 'icon', class: 'size-8', title: isPublished ? 'Metti in bozza' : 'Pubblica',
+          variant: 'ghost', size: 'icon', class: 'size-8 cursor-pointer', title: isPublished ? 'Metti in bozza' : 'Pubblica',
           onClick: () => toggleStatus(memorial)
         }, () => h(isPublished ? IconToggleRight : IconToggleLeft, {
           class: `size-4 ${isPublished ? 'text-emerald-500' : 'text-muted-foreground'}`,
         })),
         h(Button, {
-          variant: 'ghost', size: 'icon', class: 'size-8 text-destructive hover:text-destructive hover:bg-destructive/10', title: 'Elimina',
-          onClick: () => deleteMemorial(memorial.id)
+          variant: 'ghost', size: 'icon', class: 'size-8 text-destructive hover:text-destructive hover:bg-destructive/10 cursor-pointer', title: 'Elimina',
+          onClick: () => confirmDelete(memorial.id as any)
         }, () => h(IconTrash, { class: 'size-4' })),
       ])
     },
@@ -223,6 +243,15 @@ onMounted(loadMemorials)
     <QRCodeDialog
       v-model:open="isQRDialogOpen"
       :memorial="selectedMemorial"
+    />
+
+    <ConfirmDialog
+      v-model:open="isDeleteDialogOpen"
+      title="Elimina Memoriale"
+      description="Sei sicuro di voler eliminare questo memoriale? L'operazione è irreversibile e non potrà essere annullata."
+      confirm-variant="destructive"
+      confirm-text="Elimina definitavamente"
+      @confirm="doDeleteMemorial"
     />
   </div>
 </template>

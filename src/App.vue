@@ -2,6 +2,7 @@
 import { onMounted } from 'vue'
 import { RouterView } from 'vue-router'
 import { useAuth } from '@/lib/auth'
+import { Toaster } from '@/components/ui/toast'
 
 const { isAuthenticated, fetchCurrentUser } = useAuth()
 
@@ -14,6 +15,7 @@ onMounted(() => {
 
 <template>
   <RouterView />
+  <Toaster />
 </template>
 
 <style scoped></style>

@@ -1,298 +1,392 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { MemorialData } from './types'
 
-defineProps<{ memorial: MemorialData; preview?: boolean }>()
+const props = defineProps<{ memorial: MemorialData; preview?: boolean }>()
+const emit = defineEmits<{ 'edit-section': [sectionId: string] }>()
+
+const customizationStyle = computed(() => {
+  const c = props.memorial.customization || {}
+  const primary = c.primary_color || '#4A7C59'
+  const bg = c.background_color || '#F8F6F2'
+  
+  return {
+    '--primary-color': primary,
+    '--bg-color': bg,
+    '--bg-overlay': `${bg}0D`, // Very slight tint for cards
+    '--text-primary': '#1A1A1A',
+    '--text-secondary': '#666666',
+    '--font-serif': "'Cormorant Garamond', serif",
+    '--font-sans': "'Inter', sans-serif",
+  }
+})
+
+function stripHtml(html: string | undefined) {
+  if (!html) return ''
+  return html.replace(/<[^>]*>?/gm, '')
+}
 
 function formatDate(date: string | undefined | null) {
   if (!date) return ''
-  return new Date(date).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })
-}
-
-function getInitials(name: string) {
-  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
-}
-
-function authorName(author: any) {
-  if (!author) return 'Anonimo'
-  return [author.first_name, author.last_name].filter(Boolean).join(' ') || author.username
+  return new Date(date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 </script>
 
 <template>
-  <div class="classic-template">
-    <!-- Profile Image -->
-    <div class="text-center mb-6">
-      <div
-        v-if="memorial.profile_image"
-        class="profile-img"
-      >
-        <img
-          :src="memorial.profile_image.url"
-          :alt="memorial.profile_image.alternativeText || memorial.full_name"
-          class="w-full h-full object-cover rounded-full"
-        />
-      </div>
-      <div v-else class="profile-placeholder">
-        {{ getInitials(memorial.full_name) }}
-      </div>
+  <div class="app-classic" :style="customizationStyle">
+    <!-- Hero Image (Full Width as in App) -->
+    <div class="hero-section" :class="{ 'cursor-pointer': preview }" @click="preview && emit('edit-section', 'contenuti')">
+      <img v-if="memorial.cover_image" :src="memorial.cover_image.url" class="img-full" />
+      <img v-else-if="memorial.profile_image" :src="memorial.profile_image.url" class="img-full" />
+      <div v-else class="img-placeholder"></div>
     </div>
 
-    <!-- Name -->
-    <h1 class="text-center font-serif text-2xl md:text-3xl text-gray-800 mb-1">
-      {{ memorial.full_name }}
-    </h1>
+    <div class="content-container">
+      <!-- Centered Header -->
+      <header class="classic-header">
+        <span class="eyebrow">In Memoria di</span>
+        <h1 class="display-name">{{ memorial.full_name }}</h1>
+        <div class="dates-row">
+          <span class="date">{{ formatDate(memorial.dates?.birth) }}</span>
+          <span class="sep" :style="{ color: customizationStyle['--primary-color'] }">❧</span>
+          <span class="date">{{ formatDate(memorial.dates?.death) }}</span>
+        </div>
+      </header>
 
-    <!-- Slogan -->
-    <p v-if="memorial.slogan" class="text-center text-gray-500 italic mb-4">
-      "{{ memorial.slogan }}"
-    </p>
-
-    <!-- Dates -->
-    <div v-if="memorial.dates" class="text-center text-sm text-gray-600 mb-6">
-      <span v-if="memorial.dates.birth">{{ formatDate(memorial.dates.birth) }}</span>
-      <span v-if="memorial.dates.birth && memorial.dates.death"> — </span>
-      <span v-if="memorial.dates.death">{{ formatDate(memorial.dates.death) }}</span>
-    </div>
-
-    <div class="divider"></div>
-
-    <!-- Biography -->
-    <div v-if="memorial.biography" class="bio-section">
-      <h2 class="section-title">Biografia</h2>
-      <div class="bio-content" v-html="memorial.biography"></div>
-    </div>
-
-    <!-- Stats -->
-    <div class="stats-row">
-      <div class="stat-item">
-        <span class="stat-icon">🌸</span>
-        <span class="stat-count">{{ memorial.stats.flowers }}</span>
-        <span class="stat-label">Fiori</span>
+      <!-- Star Divider (Matching StarDivider component) -->
+      <div class="divider-wrap">
+        <div class="line"></div>
+        <span class="star" :style="{ color: customizationStyle['--primary-color'] }">✦</span>
+        <div class="line"></div>
       </div>
-      <div class="stat-item">
-        <span class="stat-icon">🕯️</span>
-        <span class="stat-count">{{ memorial.stats.candles }}</span>
-        <span class="stat-label">Candele</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-icon">💬</span>
-        <span class="stat-count">{{ memorial.stats.memories }}</span>
-        <span class="stat-label">Ricordi</span>
-      </div>
-    </div>
 
-    <!-- Connections -->
-    <div v-if="memorial.connections.length > 0" class="connections-section">
-      <h2 class="section-title">Famiglia</h2>
-      <ul class="connections-list">
-        <li v-for="(conn, i) in memorial.connections" :key="i" class="connection-item">
-          <span class="relation-badge">{{ conn.relation_type }}</span>
-          <span class="connection-name">
-            {{ conn.user?.first_name }} {{ conn.user?.last_name }}
-          </span>
-        </li>
-      </ul>
-    </div>
+      <!-- Centered Bio -->
+      <article v-if="memorial.biography && !memorial.customization?.hide_biography" 
+               class="bio-section"
+               :class="{ 'cursor-pointer': preview }"
+               @click="preview && emit('edit-section', 'contenuti')">
+        <p class="bio-text">{{ stripHtml(memorial.biography) }}</p>
+      </article>
 
-    <!-- Contributions -->
-    <div v-if="memorial.contributions.length > 0" class="contributions-section">
-      <h2 class="section-title">Messaggi e Ricordi</h2>
-      <div class="contributions-list">
-        <div
-          v-for="c in memorial.contributions"
-          :key="c.id"
-          class="contribution-card"
-        >
-          <div class="contribution-header">
-            <span class="contribution-type">
-              {{ c.content_type === 'flower' ? '🌸' : c.content_type === 'candle' ? '🕯️' : '💬' }}
-            </span>
-            <span class="contribution-author">{{ authorName(c.author) }}</span>
-          </div>
-          <div v-if="c.text_content" class="contribution-text" v-html="c.text_content"></div>
+      <!-- Stats Section (Matching ContributionSection in app) -->
+      <section v-if="!memorial.customization?.hide_stats" class="stats-section">
+        <div class="stat-item">
+          <span class="stat-icon">🕯️</span>
+          <span class="stat-count">{{ memorial.stats.candles }}</span>
+          <span class="stat-label">Candele</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-icon">🌸</span>
+          <span class="stat-count">{{ memorial.stats.flowers }}</span>
+          <span class="stat-label">Fiori</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-icon">💬</span>
+          <span class="stat-count">{{ memorial.stats.memories }}</span>
+          <span class="stat-label">Ricordi</span>
+        </div>
+      </section>
+
+      <!-- Connections Section -->
+      <div v-if="memorial.connections.length > 0" class="connections-section">
+        <div v-for="(conn, i) in memorial.connections" :key="i" class="conn-pill">
+           <span class="rel">{{ conn.relation_type }}</span>
+           <span class="name">{{ conn.user?.first_name }}</span>
         </div>
       </div>
+
+      <!-- Timeline Section -->
+      <section class="timeline-section">
+        <h3 class="timeline-title">La Nostra Storia</h3>
+        <div v-if="memorial.contributions.filter(c => !['flower', 'candle'].includes(c.content_type)).length > 0" class="timeline-list">
+          <div v-for="(c, i) in [...memorial.contributions]
+               .filter(c => !['flower', 'candle'].includes(c.content_type))
+               .sort((a,b) => new Date(b.event_date || b.createdAt).getTime() - new Date(a.event_date || a.createdAt).getTime())" 
+               :key="c.id" 
+               class="timeline-item">
+            <div class="timeline-line" v-if="i !== memorial.contributions.filter(c => !['flower', 'candle'].includes(c.content_type)).length - 1"></div>
+            <div class="timeline-marker" :style="{ borderColor: customizationStyle['--primary-color'] }">
+              <span v-if="c.content_type === 'photo'">🖼️</span>
+              <span v-else>💬</span>
+            </div>
+            <div class="timeline-content">
+              <div class="timeline-header">
+                <span class="author">{{ c.author?.username || 'Anonimo' }}</span>
+                <span class="date">{{ c.event_date ? new Date(c.event_date).getFullYear() : formatDate(c.createdAt) }}</span>
+              </div>
+              <p v-if="c.text_content" class="text">{{ stripHtml(c.text_content) }}</p>
+            </div>
+          </div>
+        </div>
+        <p v-else class="empty-text">Ancora nessun ricordo nella storia.</p>
+      </section>
     </div>
+
+    <footer class="app-footer">
+        Rest In Pixel
+    </footer>
   </div>
 </template>
 
 <style scoped>
-.classic-template {
-  max-width: 600px;
-  margin: 0 auto;
-  padding: 2rem 1.5rem;
-  font-family: Georgia, 'Times New Roman', serif;
-  color: #374151;
+.app-classic {
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  min-height: 100vh;
+  padding-bottom: 5rem;
 }
 
-.profile-img {
-  width: 140px;
-  height: 140px;
-  margin: 0 auto;
-  border-radius: 50%;
-  border: 4px solid #B8860B;
+.hero-section {
+  width: 100%;
+  height: 250px;
+  background: #E8E5E0;
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
-.profile-placeholder {
-  width: 140px;
-  height: 140px;
+.img-full {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.img-placeholder {
+  width: 100%;
+  height: 100%;
+  background: #F0EDE8;
+}
+
+.content-container {
+  max-width: 500px;
   margin: 0 auto;
-  border-radius: 50%;
-  border: 4px solid #B8860B;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #F9FAFB, #E5E7EB);
-  font-size: 2.5rem;
-  color: #6B7280;
-  font-weight: 600;
+  padding: 0 1.5rem;
 }
 
-.divider {
-  width: 60px;
-  height: 2px;
-  background: #B8860B;
-  margin: 0 auto 1.5rem;
+.classic-header {
+  padding: 3rem 0;
+  text-align: center;
 }
 
-.bio-section {
-  background: #F9FAFB;
-  border-top: 3px solid #B8860B;
-  border-radius: 8px;
-  padding: 1.25rem;
-  margin-bottom: 1.5rem;
-}
-
-.section-title {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: #6B7280;
-  margin-bottom: 0.75rem;
-  font-family: system-ui, -apple-system, sans-serif;
-}
-
-.bio-content {
-  font-size: 0.95rem;
-  line-height: 1.7;
-  color: #4B5563;
-}
-
-.bio-content :deep(p) {
+.eyebrow {
+  display: block;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 1rem;
+  color: var(--text-secondary);
   margin-bottom: 0.5rem;
 }
 
-.stats-row {
-  display: flex;
-  justify-content: center;
-  gap: 2rem;
-  padding: 1rem 0;
-  margin-bottom: 1.5rem;
-  border-top: 1px solid #E5E7EB;
-  border-bottom: 1px solid #E5E7EB;
-}
-
-.stat-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.2rem;
-}
-
-.stat-icon {
-  font-size: 1.2rem;
-}
-
-.stat-count {
-  font-size: 1.25rem;
+.display-name {
+  font-family: var(--font-serif);
   font-weight: 700;
-  color: #374151;
+  font-size: 2.25rem;
+  line-height: 1.1;
+  color: #1A1A1A;
 }
 
-.stat-label {
-  font-size: 0.7rem;
-  color: #9CA3AF;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-family: system-ui, -apple-system, sans-serif;
-}
-
-.connections-section {
-  margin-bottom: 1.5rem;
-}
-
-.connections-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.connection-item {
+.dates-row {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.75rem;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid #F3F4F6;
+  margin-top: 1rem;
 }
 
-.relation-badge {
-  background: #FEF3C7;
-  color: #92400E;
-  padding: 0.15rem 0.6rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  white-space: nowrap;
-  font-family: system-ui, -apple-system, sans-serif;
-}
-
-.connection-name {
+.date {
+  font-family: var(--font-serif);
   font-size: 0.9rem;
-  color: #374151;
+  color: var(--text-secondary);
 }
 
-.contributions-section {
-  margin-bottom: 1.5rem;
+.sep {
+    font-size: 1.25rem;
 }
 
-.contributions-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.contribution-card {
-  background: #F9FAFB;
-  border-radius: 8px;
-  padding: 1rem;
-}
-
-.contribution-header {
+/* Divider */
+.divider-wrap {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2.5rem;
 }
 
-.contribution-type {
+.divider-wrap .line {
+  flex: 1;
+  height: 1px;
+  background: #E8E5E0;
+  max-width: 80px;
+}
+
+.divider-wrap .star {
   font-size: 1rem;
 }
 
-.contribution-author {
+/* Bio */
+.bio-section {
+  margin-bottom: 3rem;
+}
+
+.bio-text {
+  font-family: var(--font-serif);
+  font-size: 1.125rem;
+  line-height: 1.6;
+  text-align: center;
+  color: #333333;
+}
+
+/* Stats */
+.stats-section {
+  flex-direction: row;
+  display: flex;
+  justify-content: space-around;
+  background: white;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  margin-bottom: 2.5rem;
+}
+
+.stat-item {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-icon { font-size: 1.5rem; margin-bottom: 0.25rem; }
+.stat-count { font-family: var(--font-sans); font-weight: 700; font-size: 1.25rem; }
+.stat-label { font-size: 0.7rem; text-transform: uppercase; color: var(--text-secondary); }
+
+/* Connections */
+.connections-section {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.conn-pill {
+  background: white;
+  padding: 0.4rem 0.8rem;
+  border-radius: 2rem;
+  border: 1px solid #E8E5E0;
+  display: flex;
+  gap: 0.4rem;
   font-size: 0.8rem;
-  color: #6B7280;
-  font-family: system-ui, -apple-system, sans-serif;
 }
 
-.contribution-text {
+.conn-pill .rel { font-weight: 700; color: var(--primary-color); }
+
+.app-footer {
+  text-align: center;
+  padding-top: 4rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #999;
+}
+
+/* Timeline */
+.timeline-section {
+  margin-top: 4rem;
+}
+
+.timeline-title {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.timeline-list {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.timeline-item {
+  display: flex;
+  position: relative;
+  padding-bottom: 2.5rem;
+}
+
+.timeline-line {
+  position: absolute;
+  left: 15px;
+  top: 32px;
+  bottom: 0;
+  width: 2px;
+  background: #E8E5E0;
+}
+
+.timeline-marker {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: white;
+  border: 2px solid #E8E5E0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 0.9rem;
-  color: #4B5563;
-  line-height: 1.5;
+  z-index: 1;
+  flex-shrink: 0;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 
-.contribution-text :deep(p) {
+.timeline-content {
+  margin-left: 1rem;
+  flex: 1;
+}
+
+.timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.author {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.timeline-content .date {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.timeline-content .text {
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #444;
+  background: white;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  border-left: 3px solid var(--primary-color);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
   margin: 0;
+}
+
+.action-text {
+  font-family: var(--font-sans);
+  font-style: italic;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.empty-text {
+  text-align: center;
+  color: var(--text-secondary);
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 480px) {
+  .display-name { font-size: 1.8rem; }
 }
 </style>
