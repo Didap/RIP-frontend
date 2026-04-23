@@ -54,7 +54,10 @@ const scrollTo = (id: string) => {
         >
           Accedi
         </button>
-        <Button class="bg-[#1a1a1a] hover:bg-black text-white rounded-lg px-6 h-10 text-[11px] font-bold uppercase tracking-widest shadow-xl shadow-black/5 hover:shadow-black/10 transition-all hover:scale-[1.02] active:scale-[0.98]">
+        <Button 
+          @click="router.push('/register')"
+          class="bg-[#1a1a1a] hover:bg-black text-white rounded-lg px-6 h-10 text-[11px] font-bold uppercase tracking-widest shadow-xl shadow-black/5 hover:shadow-black/10 transition-all hover:scale-[1.02] active:scale-[0.98]"
+        >
           Richiedi demo
         </Button>
       </div>
@@ -87,8 +90,8 @@ const scrollTo = (id: string) => {
         </nav>
         
         <div class="mt-auto space-y-4">
-          <Button class="w-full bg-black text-white h-14 rounded-xl text-xs font-bold uppercase tracking-widest">Accedi</Button>
-          <Button variant="outline" class="w-full h-14 rounded-xl text-xs font-bold uppercase tracking-widest border-black/10">Richiedi demo</Button>
+          <Button @click="router.push('/backoffice'); isMobileMenuOpen = false" class="w-full bg-black text-white h-14 rounded-xl text-xs font-bold uppercase tracking-widest">Accedi</Button>
+          <Button @click="router.push('/register'); isMobileMenuOpen = false" variant="outline" class="w-full h-14 rounded-xl text-xs font-bold uppercase tracking-widest border-black/10">Registrati</Button>
         </div>
       </div>
     </div>

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { 
-  IconCheck, 
+  IconCheck,
   IconArrowRight, 
   IconLayoutDashboard, 
   IconHeart,
@@ -22,6 +23,16 @@ import heroImage from '@/assets/landing/hero_landing.png'
 import showcaseImage from '@/assets/landing/showcase_landing.png'
 
 gsap.registerPlugin(ScrollTrigger)
+
+const router = useRouter()
+
+const handlePricingClick = (link: string) => {
+  if (link.startsWith('mailto:')) {
+    window.location.href = link
+  } else {
+    router.push(link)
+  }
+}
 
 const billingCycle = ref<'monthly' | 'yearly'>('monthly')
 
@@ -54,6 +65,7 @@ const pricingPlans = [
       'Supporto via email'
     ],
     cta: 'Inizia ora',
+    link: '/register',
     featured: false
   },
   {
@@ -71,6 +83,7 @@ const pricingPlans = [
       'Supporto prioritario'
     ],
     cta: 'Richiedi demo',
+    link: '/register',
     featured: true
   },
   {
@@ -87,6 +100,7 @@ const pricingPlans = [
       'Formazione on-site'
     ],
     cta: 'Contattaci',
+    link: 'mailto:info@restinpixel.com',
     featured: false
   }
 ]
@@ -176,7 +190,7 @@ onMounted(() => {
           </div>
           
           <div class="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 animate-content">
-            <Button class="w-full sm:w-auto bg-[#1a1a1a] hover:bg-black text-white rounded-xl px-10 h-14 text-xs font-bold uppercase tracking-widest shadow-2xl transition-all hover:scale-105 active:scale-95">
+            <Button @click="router.push('/register')" class="w-full sm:w-auto bg-[#1a1a1a] hover:bg-black text-white rounded-xl px-10 h-14 text-xs font-bold uppercase tracking-widest shadow-2xl transition-all hover:scale-105 active:scale-95">
               Inizia ora — Prova gratuita
             </Button>
             <a href="#how-it-works" class="flex items-center gap-3 group font-bold text-xs uppercase tracking-[0.2em] text-black/50 hover:text-black transition-all">
@@ -337,6 +351,7 @@ onMounted(() => {
             </ul>
 
             <Button 
+              @click="handlePricingClick(plan.link)"
               class="w-full h-12 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-500"
               :class="plan.featured ? 'bg-white text-black hover:bg-white/90 shadow-xl' : 'bg-black text-white hover:bg-black/90 shadow-lg'"
             >
@@ -357,10 +372,10 @@ onMounted(() => {
             <p class="text-sm lg:text-xl text-white/50 max-w-2xl mx-auto font-medium leading-relaxed text-balance">Unisciti alle migliori agenzie che hanno già scelto Rest in Pixel per onorare la memoria nell'era digitale.</p>
           </div>
           <div class="flex flex-col sm:flex-row items-center justify-center gap-4 lg:gap-6">
-            <Button class="w-full sm:w-auto bg-white text-black hover:bg-white/90 rounded-xl lg:rounded-2xl px-12 h-14 lg:h-16 text-xs font-bold uppercase tracking-widest transition-all hover:scale-105 shadow-2xl">
+            <Button @click="router.push('/register')" class="w-full sm:w-auto bg-white text-black hover:bg-white/90 rounded-xl lg:rounded-2xl px-12 h-14 lg:h-16 text-xs font-bold uppercase tracking-widest transition-all hover:scale-105 shadow-2xl">
               Inizia ora — Prova gratuita
             </Button>
-            <Button class="w-full sm:w-auto bg-white/5 border border-white/20 text-white hover:bg-white/10 rounded-xl lg:rounded-2xl px-12 h-14 lg:h-16 text-xs font-bold uppercase tracking-widest transition-all">
+            <Button @click="handlePricingClick('mailto:info@restinpixel.com')" class="w-full sm:w-auto bg-white/5 border border-white/20 text-white hover:bg-white/10 rounded-xl lg:rounded-2xl px-12 h-14 lg:h-16 text-xs font-bold uppercase tracking-widest transition-all">
               Parla con un esperto
             </Button>
           </div>

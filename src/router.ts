@@ -18,6 +18,12 @@ const router = createRouter({
       meta: { requiresAuth: false },
     },
     {
+      path: '/register',
+      name: 'Register',
+      component: () => import('@/pages/RegisterView.vue'),
+      meta: { requiresAuth: false },
+    },
+    {
       path: '/memorial/:slug',
       name: 'PublicMemorial',
       component: () => import('@/pages/PublicMemorial.vue'),
