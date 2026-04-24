@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 import { API_URL } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { IconQuote, IconCircleCheck, IconEye, IconEyeOff, IconMail, IconLock, IconBuilding, IconHash, IconPhone } from '@tabler/icons-vue'
+import { IconQuote, IconCircleCheck, IconEye, IconEyeOff, IconMail, IconLock, IconBuilding, IconHash, IconPhone, IconArrowLeft } from '@tabler/icons-vue'
 import showcaseImage from '@/assets/auth/register_bg.png'
 
 const router = useRouter()
@@ -101,7 +101,16 @@ async function handleSubmit() {
     </div>
 
     <!-- Right Column: Register Form -->
-    <div class="w-full lg:w-1/2 flex items-center justify-center p-8 md:p-12 overflow-y-auto">
+    <div class="w-full lg:w-1/2 flex flex-col items-center justify-center p-8 md:p-12 overflow-y-auto relative">
+      <!-- Back to Home -->
+      <router-link 
+        to="/" 
+        class="absolute top-8 left-8 lg:left-12 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-black/30 hover:text-[#849a8e] transition-all group"
+      >
+        <IconArrowLeft class="size-4 group-hover:-translate-x-1 transition-transform" />
+        Torna alla Home
+      </router-link>
+
       <div class="w-full max-w-md space-y-8 py-12 lg:py-0">
         <!-- Logo for mobile -->
         <div class="lg:hidden flex flex-col items-center mb-12">
@@ -129,7 +138,7 @@ async function handleSubmit() {
 
         <!-- Form State -->
         <template v-else>
-          <div class="space-y-2">
+          <div class="space-y-2 text-center lg:text-left">
             <h1 class="text-4xl font-serif tracking-tight text-black">Nuova Agenzia</h1>
             <p class="text-black/50 font-medium">Digitalizza il ricordo e offri un servizio d'eccellenza</p>
           </div>

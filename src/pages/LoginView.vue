@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { IconQuote, IconEye, IconEyeOff, IconMail, IconLock } from '@tabler/icons-vue'
+import { IconQuote, IconEye, IconEyeOff, IconMail, IconLock, IconArrowLeft } from '@tabler/icons-vue'
 import heroImage from '@/assets/auth/login_bg.png'
 
 const router = useRouter()
@@ -60,7 +60,16 @@ async function handleSubmit() {
     </div>
 
     <!-- Right Column: Login Form -->
-    <div class="w-full lg:w-1/2 flex items-center justify-center p-8 md:p-12">
+    <div class="w-full lg:w-1/2 flex flex-col items-center justify-center p-8 md:p-12 relative">
+      <!-- Back to Home -->
+      <router-link 
+        to="/" 
+        class="absolute top-8 left-8 lg:left-12 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-black/30 hover:text-[#849a8e] transition-all group"
+      >
+        <IconArrowLeft class="size-4 group-hover:-translate-x-1 transition-transform" />
+        Torna alla Home
+      </router-link>
+
       <div class="w-full max-w-md space-y-8">
         <!-- Logo for mobile -->
         <div class="lg:hidden flex flex-col items-center mb-12">
@@ -68,7 +77,7 @@ async function handleSubmit() {
           <span class="text-[10px] uppercase tracking-[0.4em] text-[#849a8e] font-bold mt-2">Rest in Pixel</span>
         </div>
 
-        <div class="space-y-2">
+        <div class="space-y-2 text-center lg:text-left">
           <h1 class="text-4xl font-serif tracking-tight text-black">Bentornato</h1>
           <p class="text-black/50 font-medium">Accedi al tuo pannello gestionale agenzia</p>
         </div>
